@@ -1,4 +1,6 @@
 import express from 'express';
+import { sequelize } from './database/sequelize.js';
+
 
 const app = express()
 
@@ -8,6 +10,7 @@ app.use(express.json());
 const main = async () => {
     try{
         app.listen(PORT, async() => {
+            await sequelize.sync({alter: true});
             console.log('Database connected');
             console.log(`Server is running on http://localhost:${PORT}`)
         })
