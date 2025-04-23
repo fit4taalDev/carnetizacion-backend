@@ -1,0 +1,24 @@
+{
+  "name": "fit4id_backend",
+  "version": "1.0.0",
+  "description": "This project is oriented towards the digital enrolment of students, integrating QR code functionalities for the management of benefits and discounts in affiliated establishments.",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fit4taalDev/carnetizacion-backend.git"
+  },
+  "author": "Fit4taal. Pablo Ruiz",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/fit4taalDev/carnetizacion-backend/issues"
+  },
+  "homepage": "https://github.com/fit4taalDev/carnetizacion-backend#readme",
+  "dependencies": {
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0"
+  }
+}
