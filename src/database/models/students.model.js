@@ -13,21 +13,18 @@ export const Students = sequelize.define('students', {
         allowNull: false,
         type: DataTypes.STRING
     },
-    email: {
-        allowNull: false,
-        type: DataTypes.STRING,
-        validate:{
-            isEmail: true
-        },
-        unique: true
-    },
-    qr_code: {
+    student_id: {
         allowNull: false,
         type: DataTypes.STRING,
         unique: true
     },
     address: {
         allowNull: false,
+        type: DataTypes.STRING,
+        unique: true
+    },
+    phone_number:{
+        allowNull:false,
         type: DataTypes.STRING,
         unique: true
     },
