@@ -1,4 +1,5 @@
 import { ValidationError } from "sequelize";
+import { Users } from "../database/models/users.model.js";
 
 class BaseService {
     constructor(model){
