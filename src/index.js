@@ -1,6 +1,8 @@
 import express from 'express';
 import { sequelize } from './database/sequelize.js';
 
+import './database/models/index.js'
+
 
 const app = express()
 

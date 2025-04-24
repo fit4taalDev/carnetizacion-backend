@@ -1,0 +1,62 @@
+import { DataTypes } from "sequelize";
+import { sequelize } from "../sequelize.js";
+import { EstablishmentRoles } from "./establishmentRoles.model.js";
+import { Users } from "./users.model.js";
+
+export const Establishments = sequelize.define('establishments', {
+    id:{
+        primaryKey: true,
+        type: DataTypes.UUID, 
+        defaultValue: DataTypes.UUIDV4
+    },
+    fullname: {
+        allowNull: false,
+        type: DataTypes.STRING
+    },
+    phone_number:{
+        allowNull:false,
+        type: DataTypes.INTEGER,
+        unique: true
+    },
+    email: {
+        allowNull: false,
+        type: DataTypes.STRING,
+        validate:{
+            isEmail: true
+        },
+        unique: true
+    },
+    password: {
+        allowNull: false,
+        type: DataTypes.STRING        
+    },
+    establishment_name:{
+        allowNull: true,
+        type: DataTypes.STRING,
+        unique: true
+    },
+    establishment_address:{
+        allowNull: true,
+        type: DataTypes.STRING,
+    },
+    establishment_role_id:{
+        allowNull: false,
+        type:DataTypes.INTEGER,
+        references: {
+            model: EstablishmentRoles,
+            key:'id'
+        }
+    },
+    user_id:{
+        allowNull: false,
+        type:DataTypes.UUID,
+        references: {
+            model: Users,
+            key:'id'
+        }
+    }
+    
+},{
+    timestamps: true,
+    updatedAt: false 
+})
