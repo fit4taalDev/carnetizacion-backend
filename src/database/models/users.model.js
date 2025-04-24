@@ -1,5 +1,6 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../sequelize.js";
+import { Roles } from "./roles.model.js";
 
 export const Users = sequelize.define('users', {
     id:{
@@ -19,6 +20,14 @@ export const Users = sequelize.define('users', {
         allowNull: false,
         type: DataTypes.STRING        
     },
+    role_id:{
+        allowNull: false,
+        type:DataTypes.INTEGER,
+        references: {
+            model: Roles,
+            key:'id'
+        }
+    }
 
 },{
     timestamps: true,
