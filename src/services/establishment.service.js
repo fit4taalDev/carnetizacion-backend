@@ -2,11 +2,11 @@
 import { Users } from "../database/models/users.model.js";
 import bcrypt from 'bcrypt'
 import BaseService from "./base.service.js";
-import { Students } from "../database/models/students.model.js";
+import { Establishments } from "../database/models/establishments.model.js";
 
-class StudentService extends BaseService{
+class EstablishmentService extends BaseService{
     constructor(){
-        super(Students)
+        super(Establishments)
     }
 
     async checkIfExistIn(model, field, value, message) {
@@ -16,22 +16,22 @@ class StudentService extends BaseService{
         }
     }
 
-    async createStudent(data){
-        const genericPassword = data.student_id + "#"
+    async createEstablishment(data){
+        const genericPassword = data.establishment_id + "#"
         const userData = {
             email: data.email,
             password: await bcrypt.hash(genericPassword, 10),
-            role_id: 2
+            role_id: 1
         }
         await this.checkIfExistIn(Users, 'email', data.email, 'The email address is already registered');
 
         const newUser = await Users.create(userData)
 
-        const newStudentData = {...data,id:newUser.id ,user_id: newUser.id}
+        const newEstablishmentData = {...data,id:newUser.id ,user_id: newUser.id}
 
-        return super.create(newStudentData)
+        return super.create(newEstablishmentData)
     }
     
 }
 
-export default StudentService
+export default EstablishmentService

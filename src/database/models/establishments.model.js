@@ -18,18 +18,6 @@ export const Establishments = sequelize.define('establishments', {
         type: DataTypes.INTEGER,
         unique: true
     },
-    email: {
-        allowNull: false,
-        type: DataTypes.STRING,
-        validate:{
-            isEmail: true
-        },
-        unique: true
-    },
-    password: {
-        allowNull: false,
-        type: DataTypes.STRING        
-    },
     establishment_name:{
         allowNull: true,
         type: DataTypes.STRING,
@@ -38,6 +26,11 @@ export const Establishments = sequelize.define('establishments', {
     establishment_address:{
         allowNull: true,
         type: DataTypes.STRING,
+    },
+    establishment_id:{
+        allowNull: false,
+        type: DataTypes.STRING,
+        unique: true
     },
     establishment_role_id:{
         allowNull: false,
