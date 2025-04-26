@@ -42,4 +42,4 @@ StudentRoles.belongsToMany(Offers,{
     through: 'offer_student_role',
     foreignKey: 'student_role_id',
     otherKey: 'offer_id'
-})
+})  
