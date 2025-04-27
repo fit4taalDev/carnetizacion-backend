@@ -3,6 +3,7 @@ import { Students } from "../database/models/students.model.js";
 import bcrypt from 'bcrypt';
 import BaseService from "./base.service.js";
 import { sequelize } from "../database/sequelize.js";
+import { generateQRCode } from "../utils/generateQR.utils.js";
 
 class StudentService extends BaseService {
     constructor() {
@@ -37,7 +38,9 @@ class StudentService extends BaseService {
                 user_id: newUser.id
             };
 
-           
+            const qrCode = await generateQRCode(data.student_id);
+            console.log(qrCode);
+
             const newStudent = await Students.create(newStudentData, { transaction: t });
 
             return newStudent;
