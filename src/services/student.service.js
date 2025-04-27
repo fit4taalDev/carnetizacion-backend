@@ -20,7 +20,7 @@ class StudentService extends BaseService {
         return await sequelize.transaction(async (t) => {
             const genericPassword = data.student_id + "#";
             const userData = {
-                email: data.email,
+                email: data.email.toLowerCase(),
                 password: await bcrypt.hash(genericPassword, 10),
                 role_id: 2
             };

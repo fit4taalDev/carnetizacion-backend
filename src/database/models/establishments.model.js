@@ -24,7 +24,7 @@ export const Establishments = sequelize.define('establishments', {
         unique: true
     },
     establishment_address:{
-        allowNull: true,
+        allowNull: false,
         type: DataTypes.STRING,
     },
     establishment_id:{

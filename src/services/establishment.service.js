@@ -19,11 +19,14 @@ class EstablishmentService extends BaseService{
     async createEstablishment(data){
         const genericPassword = data.establishment_id + "#"
         const userData = {
-            email: data.email,
+            email: data.email.toLowerCase(),
             password: await bcrypt.hash(genericPassword, 10),
             role_id: 1
         }
         await this.checkIfExistIn(Users, 'email', data.email, 'The email address is already registered');
+        await this.checkIfExistIn(Establishments, 'establishment_name', data.establishment_name, 'The establishment name is already registered');
+        await this.checkIfExistIn(Establishments, 'phone_number', data.phone_number, 'The phone number is already registered');
+        await this.checkIfExistIn(Establishments, 'establishment_id', data.establishment_id, 'The establishment id is already registered');
 
         const newUser = await Users.create(userData)
 

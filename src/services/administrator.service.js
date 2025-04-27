@@ -19,7 +19,7 @@ class AdministratoService extends BaseService{
     async createAdministrator(data) {
         return await sequelize.transaction(async (t) => {
             const userData = {
-                email: data.email,
+                email: data.email.toLowerCase(),
                 password: await bcrypt.hash(data.password, 10),
                 role_id: 0
             };
