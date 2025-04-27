@@ -19,7 +19,7 @@ export const Establishments = sequelize.define('establishments', {
         unique: true
     },
     establishment_name:{
-        allowNull: true,
+        allowNull: false,
         type: DataTypes.STRING,
         unique: true
     },
@@ -42,6 +42,7 @@ export const Establishments = sequelize.define('establishments', {
     },
     user_id:{
         allowNull: false,
+        unique: true,
         type:DataTypes.UUID,
         references: {
             model: Users,

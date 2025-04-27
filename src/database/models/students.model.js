@@ -21,10 +21,10 @@ export const Students = sequelize.define('students', {
     address: {
         allowNull: false,
         type: DataTypes.STRING,
-        unique: true
+        unique: false
     },
     phone_number:{
-        allowNull:false,
+        allowNull: true,
         type: DataTypes.STRING,
         unique: true
     },

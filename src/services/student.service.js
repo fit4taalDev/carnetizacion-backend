@@ -1,37 +1,48 @@
-
 import { Users } from "../database/models/users.model.js";
-import bcrypt from 'bcrypt'
-import BaseService from "./base.service.js";
 import { Students } from "../database/models/students.model.js";
+import bcrypt from 'bcrypt';
+import BaseService from "./base.service.js";
+import { sequelize } from "../database/sequelize.js";
 
-class StudentService extends BaseService{
-    constructor(){
-        super(Students)
+class StudentService extends BaseService {
+    constructor() {
+        super(Students);
     }
 
-    async checkIfExistIn(model, field, value, message) {
-        const existing = await model.findOne({ where: { [field]: value } });
+    async checkIfExistIn(model, field, value, message, options = {}) {
+        const existing = await model.findOne({ where: { [field]: value }, ...options });
         if (existing) {
             throw new Error(message);
         }
     }
 
-    async createStudent(data){
-        const genericPassword = data.student_id + "#"
-        const userData = {
-            email: data.email,
-            password: await bcrypt.hash(genericPassword, 10),
-            role_id: 2
-        }
-        await this.checkIfExistIn(Users, 'email', data.email, 'The email address is already registered');
+    async createStudent(data) {
+        return await sequelize.transaction(async (t) => {
+            const genericPassword = data.student_id + "#";
+            const userData = {
+                email: data.email,
+                password: await bcrypt.hash(genericPassword, 10),
+                role_id: 2
+            };
 
-        const newUser = await Users.create(userData)
+            await this.checkIfExistIn(Users, 'email', data.email, 'The email address is already registered', { transaction: t });
+            await this.checkIfExistIn(Students, 'phone_number', data.phone_number, 'The phone number is already registered', { transaction: t });
+            await this.checkIfExistIn(Students, 'student_id', data.student_id, 'The student_id is already registered', { transaction: t });
 
-        const newStudentData = {...data,id:newUser.id ,user_id: newUser.id}
+            const newUser = await Users.create(userData, { transaction: t });
 
-        return super.create(newStudentData)
+            const newStudentData = {
+                ...data,
+                id: newUser.id,
+                user_id: newUser.id
+            };
+
+           
+            const newStudent = await Students.create(newStudentData, { transaction: t });
+
+            return newStudent;
+        });
     }
-    
 }
 
-export default StudentService
+export default StudentService;

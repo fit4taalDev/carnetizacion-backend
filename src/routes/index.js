@@ -5,6 +5,7 @@ import studentRouter from './student.router.js'
 import establishmentRouter from './establishment.router.js'
 import offerRouter from './offer.router.js'
 import offerRedemptionRouter from './OfferRedemption.router.js'
+import scanRouter from './scan.router.js'
 
 export function routerApi(app){
     const router = express.Router()
@@ -15,4 +16,5 @@ export function routerApi(app){
     router.use('/establishment', establishmentRouter)
     router.use('/offer', offerRouter)
     router.use('/offer-redemption', offerRedemptionRouter)
-}
+    router.use('/scan', scanRouter)
+} 

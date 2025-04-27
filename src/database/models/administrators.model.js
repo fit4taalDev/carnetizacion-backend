@@ -17,12 +17,13 @@ export const Administrators = sequelize.define('administrators', {
         type: DataTypes.STRING
     },
     phone_number:{
-        allowNull:false,
+        allowNull:true,
         type: DataTypes.STRING,
         unique: true
     },
     user_id:{
         allowNull: false,
+        unique: true,
         type:DataTypes.UUID,
         references: {
             model: Users,
