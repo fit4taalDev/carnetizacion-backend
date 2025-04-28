@@ -32,6 +32,10 @@ export const Establishments = sequelize.define('establishments', {
         type: DataTypes.STRING,
         unique: true
     },
+    qr_img:{
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     establishment_role_id:{
         allowNull: false,
         type:DataTypes.INTEGER,

@@ -32,14 +32,16 @@ class StudentService extends BaseService {
 
             const newUser = await Users.create(userData, { transaction: t });
 
+            const qrCodeUrl = await generateQRCode(data.student_id);
+
             const newStudentData = {
                 ...data,
                 id: newUser.id,
-                user_id: newUser.id
+                user_id: newUser.id,
+                qr_img: qrCodeUrl,
             };
 
-            const qrCode = await generateQRCode(data.student_id);
-            console.log(qrCode);
+            
 
             const newStudent = await Students.create(newStudentData, { transaction: t });
 
