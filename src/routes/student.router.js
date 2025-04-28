@@ -13,4 +13,9 @@ router.post('/',
     controller.createStudent
 )
 
+router.get('/',
+    administratorHandler,
+    controller.findAllStudents
+)
+
 export default router
