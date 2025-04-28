@@ -13,7 +13,9 @@ export default {
     ], {});
   },
 
+  
   async down(queryInterface) {
     await queryInterface.bulkDelete('student_roles', null, {});
   }
 };
+   
