@@ -29,7 +29,7 @@ export const Students = sequelize.define('students', {
         unique: true
     },
     qr_img:{
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: false,
     },
     student_role_id: {

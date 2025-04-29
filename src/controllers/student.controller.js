@@ -25,6 +25,16 @@ class StudentController{
             next(error);
         }
     }
+
+    async findAllStudentById (req, res, next){
+        const {id} = req.params
+        try{
+            const students = await service.findAllStudentById(id)
+            return res.status(200).json(students)
+        }catch (error) {
+            next(error);
+        }
+    }
 }
 
 export default StudentController

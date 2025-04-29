@@ -61,7 +61,11 @@ class StudentService extends BaseService {
             exclude: ['user_id',  'student_role_id']
           }
         });
-      }
+    }
+
+    async findById(id){
+        return this.model.findOne({where: {id:id}})
+    }
 }
 
 export default StudentService;

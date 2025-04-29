@@ -18,4 +18,9 @@ router.get('/',
     controller.findAllStudents
 )
 
+router.get('/:id',
+    administratorHandler,
+    controller.findAllStudentById
+)
+
 export default router
