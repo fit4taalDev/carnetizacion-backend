@@ -28,8 +28,20 @@ class OffersService extends BaseService {
     return offer;
   }
 
-  async findAll(){
-    return this.model.findAll()
+  async findAll(role){
+    const whereCondition = role?.length ? {name:role} : undefined
+    
+    return this.model.findAll({
+      include: [
+        {
+          model: StudentRoles,
+          as: 'student_roles',
+          through: { attributes: [] },
+          required: !!role?.length,
+          where: whereCondition
+        }
+      ]
+    })
   }
 }
 

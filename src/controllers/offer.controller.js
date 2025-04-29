@@ -19,8 +19,9 @@ class OfferController{
     }
 
     async findAllOffers (req, res, next) {
+        const role = req.query.role?.toString().trim()
         try{
-            const offers = await service.findAll()
+            const offers = await service.findAll(role)
             return res.status(200).json(offers)
 
         }catch (error) {
