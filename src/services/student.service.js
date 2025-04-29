@@ -4,6 +4,7 @@ import bcrypt from 'bcrypt';
 import BaseService from "./base.service.js";
 import { sequelize } from "../database/sequelize.js";
 import { generateQRCode } from "../utils/generateQR.utils.js";
+import { StudentRoles } from "../database/models/studentRoles.model.js";
 
 class StudentService extends BaseService {
     constructor() {
@@ -32,19 +33,38 @@ class StudentService extends BaseService {
 
             const newUser = await Users.create(userData, { transaction: t });
 
+            const qrCodeUrl = await generateQRCode(data.student_id);
+
             const newStudentData = {
                 ...data,
                 id: newUser.id,
-                user_id: newUser.id
+                user_id: newUser.id,
+                qr_img: qrCodeUrl,
             };
-
-            const qrCode = await generateQRCode(data.student_id);
-            console.log(qrCode);
 
             const newStudent = await Students.create(newStudentData, { transaction: t });
 
             return newStudent;
         });
+    }
+
+    async findAllStudents() {
+        return this.model.findAll({
+          include: [{
+            model: Users,
+            attributes: ['email'],
+          },{
+            model: StudentRoles,
+            attributes: ["name"]
+          }],
+          attributes: {
+            exclude: ['user_id',  'student_role_id']
+          }
+        });
+    }
+
+    async findById(id){
+        return this.model.findOne({where: {id:id}})
     }
 }
 
