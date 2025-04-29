@@ -3,7 +3,6 @@ import { Users } from "../database/models/users.model.js";
 import bcrypt from 'bcrypt'
 import BaseService from "./base.service.js";
 import { Establishments } from "../database/models/establishments.model.js";
-import { where } from "sequelize";
 import { EstablishmentRoles } from "../database/models/establishmentRoles.model.js";
 
 class EstablishmentService extends BaseService{
@@ -37,8 +36,23 @@ class EstablishmentService extends BaseService{
         return super.create(newEstablishmentData)
     }
     
-    async findAllEstablishments(){
+    async findAllEstablishments(role){
+        const whereCondition = role ? {name:role} : undefined
         return this.model.findAll({
+            include: [{
+                model: EstablishmentRoles,
+                attributes: ['name'],
+                where: whereCondition
+            }],
+            attributes:{
+                exclude: ['user_id', 'establishment_role_id']
+            }
+        })
+    }
+
+    async findById(id){
+        return this.model.findOne({
+            where: {id:id},
             include: [{
                 model: EstablishmentRoles,
                 attributes: ['name']
@@ -48,6 +62,9 @@ class EstablishmentService extends BaseService{
             }
         })
     }
+
+
+    async
 }
 
 export default EstablishmentService

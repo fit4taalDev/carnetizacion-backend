@@ -19,8 +19,20 @@ class EstablishmentController{
 
     async findAllEstablishments (req, res, next){
         try{
-            const establishments = await service.findAllEstablishments()
+            const role = req.query.role?.toString().trim()
+
+            const establishments = await service.findAllEstablishments(role)
             return res.status(200).json(establishments)
+        }catch (error) {
+            next(error);
+        }
+    }
+
+    async findEstablishmentById (req, res, next){
+        const {id} = req.params
+        try{
+            const establishment = await service.findById(id)
+            return res.status(200).json(establishment)
         }catch (error) {
             next(error);
         }

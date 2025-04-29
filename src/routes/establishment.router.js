@@ -18,4 +18,9 @@ router.get('/',
     controller.findAllEstablishments
 )
 
+router.get('/:id',
+    administratorHandler,
+    controller.findEstablishmentById
+)
+
 export default router
