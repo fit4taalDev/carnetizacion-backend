@@ -48,14 +48,16 @@ class StudentService extends BaseService {
         });
     }
 
-    async findAllStudents() {
+    async findAllStudents(role) {
+        const whereCondition = role ? {name:role} : undefined
         return this.model.findAll({
           include: [{
             model: Users,
             attributes: ['email'],
           },{
             model: StudentRoles,
-            attributes: ["name"]
+            attributes: ["name"],
+            where: whereCondition
           }],
           attributes: {
             exclude: ['user_id',  'student_role_id']
@@ -64,7 +66,16 @@ class StudentService extends BaseService {
     }
 
     async findById(id){
-        return this.model.findOne({where: {id:id}})
+        return this.model.findOne({
+            where: {id:id},
+            include: [{
+                model: StudentRoles,
+                attributes: ['name']
+            }],
+            attributes:{
+                exclude: ['user_id']
+            }
+        })
     }
 }
 

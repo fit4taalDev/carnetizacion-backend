@@ -18,8 +18,10 @@ class StudentController{
     }
 
     async findAllStudents (req, res, next){
+        const role = req.query.role?.toString().trim()
+
         try{
-            const students = await service.findAllStudents()
+            const students = await service.findAllStudents(role)
             return res.status(200).json(students)
         }catch (error) {
             next(error);
@@ -29,7 +31,7 @@ class StudentController{
     async findAllStudentById (req, res, next){
         const {id} = req.params
         try{
-            const students = await service.findAllStudentById(id)
+            const students = await service.findById(id)
             return res.status(200).json(students)
         }catch (error) {
             next(error);
