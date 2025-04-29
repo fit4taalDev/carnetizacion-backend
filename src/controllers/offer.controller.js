@@ -17,6 +17,16 @@ class OfferController{
             next(error);
         }
     }
+
+    async findAllOffers (req, res, next) {
+        try{
+            const offers = await service.findAll()
+            return res.status(200).json(offers)
+
+        }catch (error) {
+            next(error);
+        }
+    }
 }
 
 export default OfferController

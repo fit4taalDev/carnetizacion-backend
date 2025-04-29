@@ -71,6 +71,9 @@ class StudentService extends BaseService {
             include: [{
                 model: StudentRoles,
                 attributes: ['name']
+            },{
+                model: Users,
+                attributes: ['email'],
             }],
             attributes:{
                 exclude: ['user_id']

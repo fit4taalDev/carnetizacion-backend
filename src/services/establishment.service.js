@@ -43,6 +43,10 @@ class EstablishmentService extends BaseService{
                 model: EstablishmentRoles,
                 attributes: ['name'],
                 where: whereCondition
+            },
+            {
+                model: Users,
+                attributes: ['email'],
             }],
             attributes:{
                 exclude: ['user_id', 'establishment_role_id']
@@ -56,6 +60,10 @@ class EstablishmentService extends BaseService{
             include: [{
                 model: EstablishmentRoles,
                 attributes: ['name']
+            },
+            {
+                model: Users,
+                attributes: ['email'],
             }],
             attributes:{
                 exclude: ['user_id', 'establishment_role_id']
