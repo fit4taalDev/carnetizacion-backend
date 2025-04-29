@@ -16,6 +16,15 @@ class EstablishmentController{
             next(error);
         }
     }
+
+    async findAllEstablishments (req, res, next){
+        try{
+            const establishments = await service.findAllEstablishments()
+            return res.status(200).json(establishments)
+        }catch (error) {
+            next(error);
+        }
+    }
 }
 
 export default EstablishmentController

@@ -7,5 +7,7 @@ export const studentSchema = Joi.object({
     address: Joi.string().required().min(3),
     student_role_id: Joi.number().valid(0, 1).required(),
     email: Joi.string().email().required(),
-    qr_img: Joi.string().optional()
+    qr_img: Joi.string().optional(),
+    profile_photo: Joi.string().optional()
+    
 })

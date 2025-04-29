@@ -36,6 +36,10 @@ export const Establishments = sequelize.define('establishments', {
         type: DataTypes.STRING,
         allowNull: true,
     },
+    profile_img: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
     establishment_role_id:{
         allowNull: false,
         type:DataTypes.INTEGER,

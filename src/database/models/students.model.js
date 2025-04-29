@@ -32,6 +32,10 @@ export const Students = sequelize.define('students', {
         type: DataTypes.TEXT,
         allowNull: false,
     },
+    profile_photo:{
+        type: DataTypes.TEXT,
+        allowNull: false,
+    },
     student_role_id: {
         allowNul: false,
         type:DataTypes.INTEGER,

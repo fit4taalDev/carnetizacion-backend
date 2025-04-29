@@ -13,4 +13,9 @@ router.post('/',
     controller.createEstablishment
 )
 
+router.get('/',
+    administratorHandler,
+    controller.findAllEstablishments
+)
+
 export default router
