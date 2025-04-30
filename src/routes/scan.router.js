@@ -19,9 +19,16 @@ router.get('/',
     controller.findAllByEstablishment
 )
 
-router.get('/:id',
+router.get('/establishment/:id',
     administratorHandler,
     controller.findAllByEstablishmentId
 )
+
+
+router.get('/student/:id',
+    administratorHandler,
+    controller.findAllByStudentId
+)
+
 
 export default router

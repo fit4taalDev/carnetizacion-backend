@@ -40,6 +40,17 @@ class ScanController{
         }
     }
 
+    async findAllByStudentId (req,res,next){
+        try{
+            const {id} = req.params
+            const scansByStundentId = await service.findAllByEstudentId(id)
+            return res.status(200).json(scansByStundentId)
+
+        }catch (error) {
+            next(error);
+        }
+    }
+
 }
 
 export default ScanController

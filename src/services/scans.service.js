@@ -43,18 +43,6 @@ class ScanService extends BaseService{
             where: {establishment_id:id},
             include: [
                 {
-                    model:Establishments,
-                    include:[{
-                        model:Users,
-                        attributes:{
-                            exclude:['id', 'password', 'createdAt', 'role_id']
-                        }
-                    }],
-                    attributes:{
-                        exclude: ['qr_img','establishment_id','profile_img','user_id','createdAt']
-                    }
-                },
-                {
                     model:Students,
                     include:[{
                         model:Users,
@@ -73,6 +61,28 @@ class ScanService extends BaseService{
         })
     }
     
+    async findAllByEstudentId(id){
+        return this.model.findAll({
+            where: {student_id: id},
+            include: [
+                {
+                    model:Establishments,
+                    include:[{
+                        model:Users,
+                        attributes:{
+                            exclude:['id', 'password', 'createdAt', 'role_id']
+                        }
+                    }],
+                    attributes:{
+                        exclude: ['qr_img','establishment_id','profile_img','user_id','createdAt']
+                    }
+                },
+            ],
+            attributes:{
+                exclude: ['student_id', 'establishment_id']
+            }
+        })
+    }
 }
 
 export default ScanService
