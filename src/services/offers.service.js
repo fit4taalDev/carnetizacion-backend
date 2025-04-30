@@ -43,6 +43,19 @@ class OffersService extends BaseService {
       ]
     })
   }
+
+  async findById(id) {
+    return this.model.findOne({
+      where: {id:id},
+      include:[
+        {
+          model: StudentRoles,
+          as: 'student_roles',
+          through: { attributes: [] },
+        }
+      ]
+    })
+  }
 }
 
 export default OffersService;

@@ -28,6 +28,16 @@ class OfferController{
             next(error);
         }
     }
+
+    async findOfferById (req, res, next){
+        const {id} = req.params
+        try{
+            const offer = await service.findById(id)
+            return res.status(200).json(offer)
+        }catch (error) {
+            next(error);
+        }
+    }
 }
 
 export default OfferController
