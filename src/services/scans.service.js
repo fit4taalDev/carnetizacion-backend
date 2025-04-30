@@ -2,6 +2,7 @@ import BaseService from "./base.service.js";
 import { Scans } from "../database/models/scans.models.js";
 import { Students } from "../database/models/students.model.js";
 import { Establishments } from "../database/models/establishments.model.js";
+import { Users } from "../database/models/users.model.js";
 
 class ScanService extends BaseService{
     constructor(){
@@ -29,6 +30,48 @@ class ScanService extends BaseService{
         return super.create(scanInfo)
     }
 
+    async findAllScansByEstablishment(){
+        return this.model.findAll({
+            attributes:{
+                exclude: ['student_id']
+            } 
+        })
+    }
+
+    async findAllScansByEstablishmentId(id){
+        return this.model.findAll({
+            where: {establishment_id:id},
+            include: [
+                {
+                    model:Establishments,
+                    include:[{
+                        model:Users,
+                        attributes:{
+                            exclude:['id', 'password', 'createdAt', 'role_id']
+                        }
+                    }],
+                    attributes:{
+                        exclude: ['qr_img','establishment_id','profile_img','user_id','createdAt']
+                    }
+                },
+                {
+                    model:Students,
+                    include:[{
+                        model:Users,
+                        attributes:{
+                            exclude:['id', 'password', 'createdAt', 'role_id']
+                        }
+                    }],
+                    attributes:{
+                        exclude: ['qr_img', 'profile_photo', 'user_id']
+                    }
+                },
+            ],
+            attributes:{
+                exclude: ['student_id', 'establishment_id']
+            }
+        })
+    }
     
 }
 
