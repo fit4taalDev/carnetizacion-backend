@@ -36,7 +36,7 @@ export const Establishments = sequelize.define('establishments', {
         type: DataTypes.STRING,
         allowNull: true,
     },
-    profile_img: {
+    profile_photo: {
         type: DataTypes.STRING,
         allowNull: true,
     },

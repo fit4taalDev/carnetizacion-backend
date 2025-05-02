@@ -8,18 +8,19 @@ export const Administrators = sequelize.define('administrators', {
         type: DataTypes.UUID, 
         defaultValue: DataTypes.UUIDV4
     },
-    name: {
+    fullname: {
         allowNull: false,
         type: DataTypes.STRING
     },
-    lastname: {
-        allowNull: false,
-        type: DataTypes.STRING
-    },
+
     phone_number:{
         allowNull:true,
         type: DataTypes.STRING,
         unique: true
+    },
+    profile_photo:{
+        allowNull: true,
+        type: DataTypes.STRING,
     },
     user_id:{
         allowNull: false,

@@ -1,13 +1,23 @@
 import express from 'express';
 import validatorHandler from '../middlewares/validator.handler.js';
 import { loginSchema } from '../schemas/auth.schema.js';
-import { loginController } from '../controllers/auth.controller.js';
+import AuthController from '../controllers/auth.controller.js';
 
 const router = express.Router();
 
+const controller = new AuthController()
+
 router.post('/login', 
     validatorHandler(loginSchema),
-    loginController
+    controller.login
+)
+
+router.post('/login-email', 
+    controller.checkUserExistsByEmail
+)
+
+router.post('/user-by-email',
+    controller.getUserByEmail
 )
 
 export default router
