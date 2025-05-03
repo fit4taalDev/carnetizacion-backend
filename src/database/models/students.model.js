@@ -2,6 +2,7 @@ import { DataTypes } from "sequelize";
 import { sequelize } from "../sequelize.js";
 import { StudentRoles } from "./studentRoles.model.js";
 import { Users } from "./users.model.js";
+import { Programs } from "./programs.model.js";
 
 export const Students = sequelize.define('students', {
     id:{
@@ -35,6 +36,22 @@ export const Students = sequelize.define('students', {
     profile_photo:{
         type: DataTypes.TEXT,
         allowNull: true,
+    },
+    active:{
+        type: DataTypes.BOOLEAN,
+        allowNull: false
+    },
+    birth_date:{
+        type: DataTypes.DATE,
+        allowNull: null
+    },
+    program_id: {
+        allowNul: false,
+        type:DataTypes.INTEGER,
+        references: {
+            model: Programs,
+            key: 'id'
+        }
     },
     student_role_id: {
         allowNul: false,
