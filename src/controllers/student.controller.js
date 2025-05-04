@@ -1,21 +1,43 @@
 import StudentService from "../services/student.service.js";
+import multer from 'multer'; 
+import { generateSignedUrl } from "../utils/savePicture.js";
 
 const service = new StudentService()
 
 class StudentController{
-    async createStudent (req, res, next){
-        try{
-            const body = req.body;
-            const newStudent = await service.createStudent(body)
+    async createStudent(req, res, next) {
+        try {
+          const data = req.body;
+          const file = req.file;                             
+          const fileBuffer = file ? file.buffer : null;            
+          const fileMeta = file ? { filename: file.originalname, mimetype: file.mimetype } : null;
     
-            return res.status(201).json({
-                message:'Student successfully created',
-                newStudent: newStudent
-            })
-        }catch (error) {
-            next(error);
+          const newStudent = await service.createStudent(data, fileBuffer,fileMeta);
+    
+          let profileUrl = null;
+          if (newStudent.profile_photo) {
+            profileUrl = await generateSignedUrl(newStudent.profile_photo, 60 * 60 ); // Valid for 1 hour
+          }
+    
+          return res.status(201).json({
+            message: 'Student successfully created',
+            newStudent: {
+              ...newStudent.get({ plain: true }),
+              profile_photo: profileUrl
+            }
+          });
+        } catch (err) {
+          if (err instanceof multer.MulterError) {
+            const msg = err.code === 'LIMIT_FILE_SIZE'
+              ? 'The file must not be larger than 200 KB.'
+              : err.code === 'LIMIT_UNEXPECTED_FILE'
+                ? err.message
+                : 'Error processing the image.';
+            return res.status(400).json({ error: msg });
+          }
+          next(err);
         }
-    }
+      }
 
     async findAllStudents (req, res, next){
         const role = req.query.role?.toString().trim()

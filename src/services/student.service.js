@@ -5,6 +5,7 @@ import BaseService from "./base.service.js";
 import { sequelize } from "../database/sequelize.js";
 import { generateQRCode } from "../utils/generateQR.utils.js";
 import { StudentRoles } from "../database/models/studentRoles.model.js";
+import { uploadImage } from "../utils/savePicture.js";
 
 class StudentService extends BaseService {
     constructor() {
@@ -18,35 +19,41 @@ class StudentService extends BaseService {
         }
     }
 
-    async createStudent(data) {
-        return await sequelize.transaction(async (t) => {
-            const genericPassword = data.student_id + "#";
-            const userData = {
-                email: data.email.toLowerCase(),
-                password: await bcrypt.hash(genericPassword, 10),
-                role_id: 2
-            };
+    async createStudent(data, fileBuffer, fileMeta) {
 
-            await this.checkIfExistIn(Users, 'email', data.email, 'The email address is already registered', { transaction: t });
-            await this.checkIfExistIn(Students, 'phone_number', data.phone_number, 'The phone number is already registered', { transaction: t });
-            await this.checkIfExistIn(Students, 'student_id', data.student_id, 'The student_id is already registered', { transaction: t });
+        return sequelize.transaction(async (t) => {
+          const genericPassword = data.student_id + '#';
+          const userData = {
+            email:    data.email.toLowerCase(),
+            password: await bcrypt.hash(genericPassword, 10),
+            role_id:  2
+          };
+    
+          await this.checkIfExistIn(Users, 'email', data.email, 'The email address is already registered', { transaction: t });
+          await this.checkIfExistIn( Students, 'phone_number', data.phone_number, 'The phone number is already registered', { transaction: t });
+          await this.checkIfExistIn( Students, 'student_id', data.student_id, 'The student_id is already registered', { transaction: t });
+    
+          const newUser = await Users.create(userData, { transaction: t });
+    
+          const qrCodeUrl = await generateQRCode(data.student_id);
 
-            const newUser = await Users.create(userData, { transaction: t });
-
-            const qrCodeUrl = await generateQRCode(data.student_id);
-
-            const newStudentData = {
-                ...data,
-                id: newUser.id,
-                user_id: newUser.id,
-                qr_img: qrCodeUrl,
-            };
-
-            const newStudent = await Students.create(newStudentData, { transaction: t });
-
-            return newStudent;
+          let profilePath = null;
+          if (fileBuffer && fileMeta) {
+            profilePath = await uploadImage(fileBuffer, fileMeta);
+          }
+      
+          const newStudentData = {
+            ...data,
+            id:newUser.id,
+            user_id: newUser.id,
+            qr_img: qrCodeUrl,
+            profile_photo:profilePath 
+          };
+    
+          const newStudent = await Students.create(newStudentData, { transaction: t });
+          return newStudent;
         });
-    }
+      }
 
     async findAllStudents(role) {
         const whereCondition = role ? {name:role} : undefined

@@ -1,58 +1,34 @@
 import { Storage } from '@google-cloud/storage';
-import { randomUUID } from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 
-// Initialize Google Cloud Storage
-const bucket = new Storage({ keyFilename: process.env.KEY_FILE_NAME })
-  .bucket(process.env.GCP_BUCKET_NAME);
+const storage = new Storage();
+const bucket  = storage.bucket(process.env.GCP_BUCKET_NAME);
 
-/**
- * Uploads a file stream (from FormData) to GCS and returns a signed read URL.
- * Accepts only PNG, JPG, JPEG. Enforces max size of 200 KB.
- *
- * @param {import('stream').Readable} stream - Readable stream of the file.
- * @param {string} originalName - Original filename (with extension).
- * @param {string} mimeType - MIME type of the file.
- * @returns {Promise<string>} Signed read URL (15 min expiration).
- */
-export function savePictureFromStream(stream, originalName, mimeType) {
-  // Validate extension
-  const ext = originalName.split('.').pop().toLowerCase();
-  if (!['png', 'jpg', 'jpeg'].includes(ext)) {
-    throw new Error('Invalid file type. Only PNG, JPG, JPEG allowed.');
-  }
 
-  // Generate unique filename
-  const fileName = `${Date.now()}-${randomUUID()}.${ext}`;
-  const gcsFile = bucket.file(`images/${fileName}`);
+export async function uploadImage(buffer, fileMeta) {
 
-  // Create write stream to GCS
-  const writeStream = gcsFile.createWriteStream({
-    metadata: { contentType: mimeType, cacheControl: 'public, max-age=3600' },
-    resumable: false
-  });
+  const ext = fileMeta.filename.split('.').pop();
+  const filePath = `students/${uuidv4()}.${ext}`;
 
-  return new Promise((resolve, reject) => {
-    let uploadedBytes = 0;
-    stream.on('data', chunk => {
-      uploadedBytes += chunk.length;
-      if (uploadedBytes > 200 * 1024) {
-        writeStream.destroy();
-        reject(new Error('File size exceeds 200 KB.'));
-      }
+  await new Promise((resolve, reject) => {
+    const file = bucket.file(filePath);
+    const ws   = file.createWriteStream({
+      metadata:  { contentType: fileMeta.mimetype },
+      resumable: false,
+      public:    false    
     });
-
-    stream.pipe(writeStream)
-      .on('error', err => reject(new Error('Upload error: ' + err.message)))
-      .on('finish', async () => {
-        try {
-          const [url] = await gcsFile.getSignedUrl({
-            action: 'read',
-            expires: Date.now() + 15 * 60 * 1000
-          });
-          resolve(url);
-        } catch (e) {
-          reject(e);
-        }
-      });
+    ws.on('error',   reject);
+    ws.on('finish',  resolve);
+    ws.end(buffer);
   });
+
+  return filePath;
+}
+export async function generateSignedUrl(filePath, expiresSeconds = 900) {
+  const file = bucket.file(filePath);
+  const [url] = await file.getSignedUrl({
+    action:  'read',
+    expires: Date.now() + expiresSeconds * 1000
+  });
+  return url;
 }
