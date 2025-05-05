@@ -2,7 +2,7 @@ import { DataTypes } from "sequelize";
 import { sequelize } from "../sequelize.js";
 import { EstablishmentRoles } from "./establishmentRoles.model.js";
 import { Users } from "./users.model.js";
-import { EstablishmentCategory } from "./establishmentCategory.model.js";
+import { EstablishmentCategories } from "./establishmentCategories.model.js";
 
 export const Establishments = sequelize.define('establishments', {
     id:{
@@ -34,7 +34,7 @@ export const Establishments = sequelize.define('establishments', {
         unique: true
     },
     qr_img:{
-        type: DataTypes.STRING,
+        type: DataTypes.TEXT,
         allowNull: true,
     },
     kvk:{
@@ -50,7 +50,7 @@ export const Establishments = sequelize.define('establishments', {
         allowNull: false,
         type:DataTypes.INTEGER,
         references: {
-            model: EstablishmentCategory,
+            model: EstablishmentCategories,
             key:'id'
         }
     },

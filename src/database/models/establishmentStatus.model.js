@@ -1,7 +1,7 @@
 import { DataTypes } from "sequelize"
 import { sequelize } from "../sequelize.js"
 
-export const EstablishmentCategory = sequelize.define('establishment_category', {
+export const EstablishmentStatus = sequelize.define('establishment_status', {
     id:{
         primaryKey: true,
         autoIncrement: true,

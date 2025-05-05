@@ -8,6 +8,6 @@ export const establishmentSchema = Joi.object({
     establishment_address: Joi.string().required().min(3),
     establishment_id: Joi.string().required().min(5),
     establishment_role_id: Joi.number().valid(0, 1).required(),
-    qr_img: Joi.string().optional(),
-    profile_img: Joi.string().optional()
+    kvk: Joi.string().required(),
+    profile_photo: Joi.string().optional()
 })

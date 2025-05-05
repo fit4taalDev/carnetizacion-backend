@@ -87,15 +87,10 @@ class StudentService extends BaseService {
               whereStudents.createdAt[Op.gte] = new Date(dateFrom);
             }
             if (dateTo) {
-              // para incluir todo el día 'dateTo', puedes sumar 23:59:59
               const end = new Date(dateTo);
               end.setHours(23, 59, 59, 999);
               whereStudents.createdAt[Op.lte] = end;
             }
-            // Alternativamente, si quieres usar BETWEEN:
-            // whereStudents.createdAt = {
-            //   [Op.between]: [new Date(dateFrom), new Date(dateTo)]
-            // };
           }
           
         
