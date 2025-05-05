@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 import './database/models/index.js'
 import { routerApi } from './routes/index.js';
 import errorHandler from './middlewares/error.handler.js';
-import cloudinary from '../cloudinaryConfig.js';
+import cors from 'cors';
 
 dotenv.config();
 
@@ -12,6 +12,8 @@ const app = express()
 const PORT  = process.env.PORT || 3000;
 
 app.use(express.json());
+
+app.use(cors());
 
 routerApi(app);
 

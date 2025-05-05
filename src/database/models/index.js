@@ -13,6 +13,7 @@ import { Offers } from './offers.model.js';
 import { OfferRedemptions } from './offerRedemptions.js';
 import { Scans } from './scans.models.js'
 import { Programs } from './programs.model.js'
+import { EstablishmentCategory } from './establishmentCategory.model.js'
 
 StudentRoles.hasMany(Students, {foreignKey: 'student_role_id'});
 Students.belongsTo(StudentRoles, {foreignKey: 'student_role_id'})
@@ -22,6 +23,10 @@ Students.belongsTo(Programs, {foreignKey: 'program_id'})
 
 EstablishmentRoles.hasMany(Establishments, {foreignKey: 'establishment_role_id'});
 Establishments.belongsTo(EstablishmentRoles,  {foreignKey: 'establishment_role_id'})
+
+EstablishmentCategory.hasMany(Establishments, {foreignKey: 'establishment_category_id'})
+Establishments.belongsTo(EstablishmentCategory, {foreignKey: 'establishment_category_id'})
+
 
 Users.hasOne(Administrators, {foreignKey: 'user_id'});
 Administrators.belongsTo(Users, {foreignKey: 'user_id'});

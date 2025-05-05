@@ -6,6 +6,8 @@ import { sequelize } from "../database/sequelize.js";
 import { generateQRCode } from "../utils/generateQR.utils.js";
 import { StudentRoles } from "../database/models/studentRoles.model.js";
 import { uploadImage } from "../utils/savePicture.js";
+import { Programs } from "../database/models/programs.model.js";
+import { Op } from 'sequelize';
 
 class StudentService extends BaseService {
     constructor() {
@@ -55,21 +57,76 @@ class StudentService extends BaseService {
         });
       }
 
-    async findAllStudents(role) {
-        const whereCondition = role ? {name:role} : undefined
-        return this.model.findAll({
-          include: [{
-            model: Users,
-            attributes: ['email'],
-          },{
-            model: StudentRoles,
-            attributes: ["name"],
-            where: whereCondition
-          }],
-          attributes: {
-            exclude: ['user_id',  'student_role_id']
+    async findAllStudents(role, fullname, active, programId, dateFrom, dateTo) {
+        const whereStudents = {}
+
+        if (fullname) {
+            whereStudents.fullname = { [Op.iLike]: `%${fullname}%` };
           }
-        });
+
+        if (active === 'true') {
+        whereStudents.active = true;
+        } else if (active === 'false') {
+        whereStudents.active = false;
+        }
+        if (programId !== undefined && !isNaN(programId)) {
+            whereStudents.program_id = programId;
+        }
+
+        const studentRolesInclude = {
+            model: StudentRoles,
+            attributes: ['name'],
+            ...(role
+              ? { where: { name: role }, required: true }
+              : { required: false })
+        };
+
+        if (dateFrom || dateTo) {
+            whereStudents.createdAt = {};
+            if (dateFrom) {
+              whereStudents.createdAt[Op.gte] = new Date(dateFrom);
+            }
+            if (dateTo) {
+              // para incluir todo el día 'dateTo', puedes sumar 23:59:59
+              const end = new Date(dateTo);
+              end.setHours(23, 59, 59, 999);
+              whereStudents.createdAt[Op.lte] = end;
+            }
+            // Alternativamente, si quieres usar BETWEEN:
+            // whereStudents.createdAt = {
+            //   [Op.between]: [new Date(dateFrom), new Date(dateTo)]
+            // };
+          }
+          
+        
+        return await Students.findAll({
+            where: whereStudents,
+            attributes: {
+              include: [
+                [
+                  sequelize.literal(`(
+                    SELECT COUNT(*)
+                    FROM offer_redemptions AS ordr
+                    WHERE ordr.student_id = "students"."id"
+                  )`),
+                  'offerRedemptionsCount'
+                ]
+              ],
+              exclude: ['user_id', 'student_role_id', 'program_id']
+            },
+            include: [
+              { model: Users, attributes: ['email'] },
+              studentRolesInclude,
+              {
+                model: StudentRoles,
+                attributes: ['name'],
+              },
+              {
+                model: Programs,
+                attributes: ['name'],
+              }
+            ]
+          });
     }
 
     async findById(id){

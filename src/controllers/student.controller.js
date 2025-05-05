@@ -40,10 +40,29 @@ class StudentController{
       }
 
     async findAllStudents (req, res, next){
-        const role = req.query.role?.toString().trim()
+      const role     = req.query.role     ? req.query.role.toString().trim()     : undefined;
+      const fullname = req.query.fullname ? req.query.fullname.toString().trim() : undefined;
+  
+      const activeRaw = req.query.active;
+      let active;
+      if (activeRaw === 'true' || activeRaw === 'false') {
+        active = activeRaw;
+      }
+  
+      const programRaw = req.query.program_id ?? req.query.program;
+      let program;
+      if (programRaw !== undefined && programRaw !== '') {
+        program = parseInt(programRaw.toString(), 10);
+        if (isNaN(program)) {
+          return res.status(400).json({ message: 'program_id debe ser un entero válido' });
+        }
+      }
+  
+      const dateFrom = req.query.dateFrom || req.query.date_from;
+      const dateTo   = req.query.dateTo   || req.query.date_to;
 
         try{
-            const students = await service.findAllStudents(role)
+            const students = await service.findAllStudents(role,fullname, active, program, dateFrom, dateTo)
             return res.status(200).json(students)
         }catch (error) {
             next(error);
