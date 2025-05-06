@@ -1,7 +1,6 @@
 import { DataTypes } from "sequelize";
 import { sequelize } from "../sequelize.js";
 import { Establishments } from "./establishments.model.js";
-import { StudentRoles } from "./studentRoles.model.js";
 
 export const Offers = sequelize.define('offers', {
     id:{

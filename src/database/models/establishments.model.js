@@ -3,6 +3,7 @@ import { sequelize } from "../sequelize.js";
 import { EstablishmentRoles } from "./establishmentRoles.model.js";
 import { Users } from "./users.model.js";
 import { EstablishmentCategories } from "./establishmentCategories.model.js";
+import { EstablishmentStatus } from "./establishmentStatus.model.js";
 
 export const Establishments = sequelize.define('establishments', {
     id:{
@@ -45,6 +46,14 @@ export const Establishments = sequelize.define('establishments', {
     profile_photo: {
         type: DataTypes.STRING,
         allowNull: true,
+    },
+    establishment_status_id:{
+        allowNull: false,
+        type:DataTypes.INTEGER,
+        references: {
+            model: EstablishmentStatus,
+            key:'id'
+        }
     },
     establishment_category_id:{
         allowNull: false,

@@ -14,6 +14,7 @@ import { OfferRedemptions } from './offerRedemptions.js';
 import { Scans } from './scans.models.js'
 import { Programs } from './programs.model.js'
 import { EstablishmentCategories } from './establishmentCategories.model.js'
+import { EstablishmentStatus } from './establishmentStatus.model.js'
 
 
 
@@ -29,6 +30,8 @@ Establishments.belongsTo(EstablishmentRoles,  {foreignKey: 'establishment_role_i
 EstablishmentCategories.hasMany(Establishments, {foreignKey: 'establishment_category_id'})
 Establishments.belongsTo(EstablishmentCategories, {foreignKey: 'establishment_category_id'})
 
+EstablishmentStatus.hasMany(Establishments, {foreignKey: 'establishment_status_id'})
+Establishments.belongsTo(EstablishmentStatus, {foreignKey: 'establishment_status_id'})
 
 Users.hasOne(Administrators, {foreignKey: 'user_id'});
 Administrators.belongsTo(Users, {foreignKey: 'user_id'});

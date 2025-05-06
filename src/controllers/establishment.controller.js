@@ -52,8 +52,23 @@ class EstablishmentController{
     async findAllEstablishments (req, res, next){
         try{
             const role = req.query.role?.toString().trim()
+            const establishment_name = req.query.establishment_name ? req.query.establishment_name.toString().trim() : undefined;
+            const status = req.query.status?.toString().trim();
 
-            const establishments = await service.findAllEstablishments(role)
+            const dateFrom = req.query.dateFrom || req.query.date_from;
+            const dateTo   = req.query.dateTo   || req.query.date_to;
+
+            const establishmentRaw = req.query.establishment_id ?? req.query.establishment;
+
+            let establishment;
+            if (establishmentRaw !== undefined && establishmentRaw !== '') {
+              establishment = parseInt(establishmentRaw.toString(), 10);
+              if (isNaN(establishment)) {
+                return res.status(400).json({ message: 'establishment_id debe ser un entero válido' });
+              }
+            }
+
+            const establishments = await service.findAllEstablishments(role, establishment_name, status, dateFrom, dateTo, establishment)
             return res.status(200).json(establishments)
         }catch (error) {
             next(error);

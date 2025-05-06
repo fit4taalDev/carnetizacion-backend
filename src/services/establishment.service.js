@@ -7,6 +7,7 @@ import { EstablishmentRoles } from "../database/models/establishmentRoles.model.
 import { generateEstablishmentQRCode } from "../utils/establishmentQR.util.js";
 import { uploadImage } from "../utils/savePicture.js";
 import { sequelize } from "../database/sequelize.js";
+import { Op } from "sequelize";
 
 class EstablishmentService extends BaseService{
     constructor(){
@@ -22,15 +23,13 @@ class EstablishmentService extends BaseService{
 
     async createEstablishment(data, fileBuffer, fileMeta) {
         return sequelize.transaction(async (t) => {
-          // 1. Crear el usuario asociado
           const genericPassword = data.establishment_id + '#';
           const userData = {
             email: data.email.toLowerCase(),
             password: await bcrypt.hash(genericPassword, 10),
-            role_id: 1, // rol de establecimiento
+            role_id: 1, 
           };
-    
-          // 2. Validaciones de unicidad dentro de la transacción
+
           await this.checkIfExistIn(Users, 'email', data.email,
             'The email address is already registered',
             { transaction: t }
@@ -53,18 +52,15 @@ class EstablishmentService extends BaseService{
             { transaction: t }
           );
     
-          // 3. Crear el usuario
           const newUser = await Users.create(userData, { transaction: t });
 
           const qrEstablishent = await generateEstablishmentQRCode(`${process.env.FRONTEND_URL}/${data.establishment_id}`)
-    
-          // 4. Subir la imagen (si vino)
+
           let profilePath = null;
           if (fileBuffer && fileMeta) {
             profilePath = await uploadImage(fileBuffer, fileMeta);
           }
     
-          // 5. Armar datos finales y crear el establecimiento
           const newEstablishmentData = {
             ...data,
             id: newUser.id,
@@ -78,22 +74,50 @@ class EstablishmentService extends BaseService{
         });
       }
 
-      async findAllEstablishments(role) {
-        const whereCondition = role ? { name: role } : undefined;
+      async findAllEstablishments(role, establishment_name, status, dateFrom, dateTo, establishment ) {
+        const whereEstablishemnt = {}
+        
+        if (establishment_name) {
+            whereEstablishemnt.establishment_name = { [Op.iLike]: `%${establishment_name}%` };
+        }
+        if (role) {
+          whereEstablishemnt.establishment_role_id = Number(role);
+        }
+
+        if (status) {
+          const statusId = parseInt(status, 10);
+          if (isNaN(statusId)) {
+            throw new Error(`El parámetro status debe ser un número válido, no: "${status}"`);
+          }
+          whereEstablishemnt.establishment_status_id = statusId;
+        }
+
+        if (dateFrom || dateTo) {
+            whereEstablishemnt.createdAt = {};
+            if (dateFrom) {
+              whereEstablishemnt.createdAt[Op.gte] = new Date(dateFrom);
+            }
+            if (dateTo) {
+              const end = new Date(dateTo);
+              end.setHours(23, 59, 59, 999);
+              whereEstablishemnt.createdAt[Op.lte] = end;
+            }
+          }
     
+        if (establishment !== undefined && !isNaN(establishment)) {
+          whereEstablishemnt.establishment_category_id = establishment;
+        }
         return await Establishments.findAll({
-          where: whereCondition,
+          where: whereEstablishemnt,
           include: [
             {
               model: EstablishmentRoles,
               attributes: ['name'],
-              where: whereCondition,
-              required: !!role
             },
             {
               model: Users,
               attributes: ['email']
-            }
+            },
           ],
           attributes: {
             include: [
