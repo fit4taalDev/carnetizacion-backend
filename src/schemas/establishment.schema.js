@@ -11,5 +11,6 @@ export const establishmentSchema = Joi.object({
     establishment_status_id: Joi.number().valid(0, 1, 2).required(),
     establishment_category_id: Joi.number().required(),
     kvk: Joi.string().required(),
+    description: Joi.string().max(40).required(),
     profile_photo: Joi.string().optional()
 })

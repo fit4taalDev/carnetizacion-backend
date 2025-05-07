@@ -20,6 +20,11 @@ export const Users = sequelize.define('users', {
         allowNull: false,
         type: DataTypes.STRING        
     },
+    first_time:{ 
+        allowNull:false,
+        type: DataTypes.BOOLEAN,
+        defaultValue: true
+    },
     role_id:{
         allowNull: false,
         type:DataTypes.INTEGER,

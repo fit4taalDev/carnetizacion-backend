@@ -8,6 +8,7 @@ import { generateEstablishmentQRCode } from "../utils/establishmentQR.util.js";
 import { uploadImage } from "../utils/savePicture.js";
 import { sequelize } from "../database/sequelize.js";
 import { Op } from "sequelize";
+import { EstablishmentCategories } from "../database/models/establishmentCategories.model.js";
 
 class EstablishmentService extends BaseService{
     constructor(){
@@ -115,6 +116,10 @@ class EstablishmentService extends BaseService{
               attributes: ['name'],
             },
             {
+              model: EstablishmentCategories,
+              attributes: ['id','name'],
+            },
+            {
               model: Users,
               attributes: ['email']
             },
@@ -145,6 +150,10 @@ class EstablishmentService extends BaseService{
             include: [{
                 model: EstablishmentRoles,
                 attributes: ['name']
+            },
+            {
+              model: EstablishmentCategories,
+              attributes: ['id','name'],
             },
             {
                 model: Users,

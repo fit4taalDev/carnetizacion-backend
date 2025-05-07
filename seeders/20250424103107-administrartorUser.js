@@ -3,10 +3,10 @@ export default {
   async up(queryInterface) {
     await queryInterface.bulkInsert('administrators', [
       {
-        id: "9a4a559d-5d65-4b78-8af2-98ade9634882",
+        id: "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
         fullname: 'Pablo Ruiz',
         phone_number: "123456789",
-        user_id: "9a4a559d-5d65-4b78-8af2-98ade9634882",
+        user_id: "3f2504e0-4f89-11d3-9a0c-0305e82c3301",
         createdAt: new Date()
       },
     ], {});

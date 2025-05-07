@@ -7,10 +7,11 @@ export default {
     const currentDate = new Date();
     await queryInterface.bulkInsert('users', [
       {
-        id: uuidv4(),
+        id: '3f2504e0-4f89-11d3-9a0c-0305e82c3301',
         email: process.env.ADMIN_EMAIL,
         password: await bcrypt.hash(process.env.ADMIN_PASSWORD, 10),
         role_id: 0,
+        first_time: false,
         createdAt: currentDate,
       },
     ], {});

@@ -19,6 +19,7 @@ class AuthController{
               id: user.id,
               email: user.email,
               role: user.role.name,
+              firs_time: user.first_time,
               fullname,
               profile_photo
             },

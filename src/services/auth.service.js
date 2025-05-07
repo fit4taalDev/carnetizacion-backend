@@ -16,10 +16,10 @@ class AuthService extends BaseService{
         const user  = await this.model.findOne({
             where: {email: data.email.toLowerCase()},
             include: [
-                { model: Roles,           attributes: ['id', 'name'] },
+                { model: Roles,           attributes: ['id', 'name', ] },
                 { model: Administrators,  attributes: ['profile_photo', 'fullname']},
-                { model: Students,        attributes: ['fullname', 'profile_photo']},
-                { model: Establishments,  attributes: ['establishment_name', 'profile_photo']},
+                { model: Students,        attributes: ['fullname', 'profile_photo', 'student_role_id']},
+                { model: Establishments,  attributes: ['establishment_name', 'profile_photo', 'establishment_role_id']},
               ]
             });
 
