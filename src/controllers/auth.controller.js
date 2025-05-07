@@ -10,6 +10,7 @@ class AuthController{
           const { administrator, student, establishment } = user;
           const profile = administrator || student || establishment;
       
+          const sub_role = profile.student_role_id ?? profile. establishment_role_id 
           const fullname      = profile.fullname ?? profile.establishment_name;
           const profile_photo = profile.profile_photo;
       
@@ -19,8 +20,9 @@ class AuthController{
               id: user.id,
               email: user.email,
               role: user.role.name,
-              firs_time: user.first_time,
+              first_time: user.first_time,
               fullname,
+              sub_role,
               profile_photo
             },
             token
