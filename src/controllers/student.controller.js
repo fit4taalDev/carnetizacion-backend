@@ -1,6 +1,6 @@
 import StudentService from "../services/student.service.js";
 import multer from 'multer'; 
-import { generateSignedUrl } from "../utils/savePicture.js";
+import { generateSignedUrl } from "../utils/signedUrl.js";
 
 const service = new StudentService()
 
@@ -16,7 +16,7 @@ class StudentController{
     
           let profileUrl = null;
           if (newStudent.profile_photo) {
-            profileUrl = await generateSignedUrl(newStudent.profile_photo, 60 * 60 ); // Valid for 1 hour
+            profileUrl = await generateSignedUrl(newStudent.profile_photo);
           }
     
           return res.status(201).json({

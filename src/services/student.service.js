@@ -8,6 +8,12 @@ import { StudentRoles } from "../database/models/studentRoles.model.js";
 import { uploadImage } from "../utils/savePicture.js";
 import { Programs } from "../database/models/programs.model.js";
 import { Op } from 'sequelize';
+import { Storage } from "@google-cloud/storage";
+import { generateSignedUrl } from "../utils/signedUrl.js";
+
+const storage = new Storage({ keyFilename: process.env.KEY_FILE_NAME });
+const bucket  = storage.bucket(process.env.GCP_BUCKET_NAME);
+
 
 class StudentService extends BaseService {
     constructor() {
@@ -41,7 +47,7 @@ class StudentService extends BaseService {
 
           let profilePath = null;
           if (fileBuffer && fileMeta) {
-            profilePath = await uploadImage(fileBuffer, fileMeta);
+            profilePath = await uploadImage(fileBuffer, fileMeta,data.student_id ,'student');
           }
       
           const newStudentData = {
@@ -93,8 +99,7 @@ class StudentService extends BaseService {
             }
           }
           
-        
-        return await Students.findAll({
+          const students = await Students.findAll({
             where: whereStudents,
             attributes: {
               include: [
@@ -110,34 +115,53 @@ class StudentService extends BaseService {
               exclude: ['user_id', 'student_role_id', 'program_id']
             },
             include: [
-              { model: Users, attributes: ['email'] },
+              { model: Users,        attributes: ['email'] },
               studentRolesInclude,
-              {
-                model: StudentRoles,
-                attributes: ['name'],
-              },
-              {
-                model: Programs,
-                attributes: ['name'],
-              }
+              { model: Programs,     attributes: ['name'] }
             ]
           });
-    }
 
-    async findById(id){
-        return this.model.findOne({
-            where: {id:id},
-            include: [{
-                model: StudentRoles,
-                attributes: ['name']
-            },{
-                model: Users,
-                attributes: ['email'],
-            }],
-            attributes:{
-                exclude: ['user_id']
-            }
-        })
+          const enriched = await Promise.all(
+            students.map(async inst => {
+              const student = inst.get({ plain: true })
+        
+              if (student.qr_img) {
+                student.qr_img = await generateSignedUrl(student.qr_img, 7200)
+              }
+              if (student.profile_photo) {
+                student.profile_photo = await generateSignedUrl(student.profile_photo, 7200)
+              }
+        
+              return student
+            })
+          )
+        
+          return enriched
+        
+    }
+    async findById(id) {
+      const inst = await this.model.findOne({
+        where: { id },
+        include: [
+          { model: StudentRoles, attributes: ['name'] },
+          { model: Users,attributes: ['email'] }
+        ],
+        attributes: {
+          exclude: ['user_id']
+        }
+      });
+      if (!inst) return null;
+    
+      const student = inst.get({ plain: true });
+    
+      if (student.qr_img) {
+        student.qr_img = await generateSignedUrl(student.qr_img, 7200);
+      }
+      if (student.profile_photo) {
+        student.profile_photo = await generateSignedUrl(student.profile_photo, 7200);
+      }
+    
+      return student;
     }
 }
 

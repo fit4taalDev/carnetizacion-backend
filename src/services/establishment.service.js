@@ -8,7 +8,13 @@ import { generateEstablishmentQRCode } from "../utils/establishmentQR.util.js";
 import { uploadImage } from "../utils/savePicture.js";
 import { sequelize } from "../database/sequelize.js";
 import { Op } from "sequelize";
+import { Storage } from "@google-cloud/storage";
 import { EstablishmentCategories } from "../database/models/establishmentCategories.model.js";
+import { generateSignedUrl } from "../utils/signedUrl.js";
+
+
+const storage = new Storage({ keyFilename: process.env.KEY_FILE_NAME });
+const bucket  = storage.bucket(process.env.GCP_BUCKET_NAME);
 
 class EstablishmentService extends BaseService{
     constructor(){
@@ -59,7 +65,7 @@ class EstablishmentService extends BaseService{
 
           let profilePath = null;
           if (fileBuffer && fileMeta) {
-            profilePath = await uploadImage(fileBuffer, fileMeta);
+            profilePath = await uploadImage(fileBuffer, fileMeta, 'establishment');
           }
     
           const newEstablishmentData = {
@@ -108,7 +114,7 @@ class EstablishmentService extends BaseService{
         if (establishment !== undefined && !isNaN(establishment)) {
           whereEstablishemnt.establishment_category_id = establishment;
         }
-        return await Establishments.findAll({
+        const establishments =  await Establishments.findAll({
           where: whereEstablishemnt,
           include: [
             {
@@ -142,6 +148,22 @@ class EstablishmentService extends BaseService{
             ]
           }
         });
+        const enriched = await Promise.all(
+          establishments.map(async inst => {
+            const establishment = inst.get({ plain: true })
+      
+            if (establishment.qr_img) {
+              establishment.qr_img = await generateSignedUrl(establishment.qr_img, 7200)
+            }
+            if (establishment.profile_photo) {
+              establishment.profile_photo = await generateSignedUrl(establishment.profile_photo, 7200)
+            }
+      
+            return establishment
+          })
+        )
+        
+          return enriched
       }
 
     async findById(id){

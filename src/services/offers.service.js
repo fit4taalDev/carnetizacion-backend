@@ -2,31 +2,41 @@ import BaseService from "./base.service.js";
 import { Offers } from "../database/models/offers.model.js";
 import { sequelize } from "../database/sequelize.js";
 import { StudentRoles } from "../database/models/studentRoles.model.js";
+import { uploadImage } from "../utils/savePicture.js";
 
 class OffersService extends BaseService {
   constructor() {
     super(Offers);
   }
 
-  async create(data) {
-    let { student_role_ids, ...offerData } = data;
+  async create(data, fileBuffer, fileMeta) {
+    if (fileBuffer && fileMeta) {
+      const imageKey = await uploadImage(
+        fileBuffer,
+        fileMeta,
+        data.establishment_id.toString(),
+        'offers'
+      )
+      data.image = imageKey
+    }
 
-    const offer = await super.create(offerData);
+    let { student_role_ids, ...offerData } = data
+    const offer = await super.create(offerData)
 
     if (!student_role_ids || student_role_ids.length === 0) {
-      const allRoles = await StudentRoles.findAll();
-      student_role_ids = allRoles.map(role => role.id);
+      const allRoles = await StudentRoles.findAll()
+      student_role_ids = allRoles.map(role => role.id)
     }
-  
-    const offerStudentRoles = student_role_ids.map(role_id => ({
-      offer_id: offer.id,
-      student_role_id: role_id
-    }));
-  
-    await sequelize.models.offer_student_role.bulkCreate(offerStudentRoles);
 
-    return offer;
+    const offerStudentRoles = student_role_ids.map(role_id => ({
+      offer_id:        offer.id,
+      student_role_id: role_id
+    }))
+    await sequelize.models.offer_student_role.bulkCreate(offerStudentRoles)
+
+    return offer
   }
+
 
   async findAll(role){
     const whereCondition = role?.length ? {name:role} : undefined

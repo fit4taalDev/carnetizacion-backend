@@ -2,11 +2,16 @@ import multer from 'multer';
 
 const storage = multer.memoryStorage();
 const fileFilter = (req, file, cb) => {
-  const allowed = ['image/jpeg','image/png','image/jpg'];
+  const allowed = [
+    'image/jpeg',
+    'image/png',
+    'image/jpg',
+    'image/webp'    // ahora también permitimos WebP
+  ];
   if (!allowed.includes(file.mimetype)) {
     return cb(new multer.MulterError(
       'LIMIT_UNEXPECTED_FILE',
-      'Invalid format: JPG, JPEG or PNG only.'
+      'Invalid format: JPG, JPEG, PNG or WebP only.'
     ));
   }
   cb(null, true);

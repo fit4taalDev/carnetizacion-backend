@@ -1,4 +1,5 @@
 import AuthService from "../services/auth.service.js";
+import { generateSignedUrl } from "../utils/signedUrl.js";
 
 const service = new AuthService()
 
@@ -12,7 +13,10 @@ class AuthController{
       
           const sub_role = profile.student_role_id ?? profile. establishment_role_id 
           const fullname      = profile.fullname ?? profile.establishment_name;
-          const profile_photo = profile.profile_photo;
+          let profile_photo = null
+          if (profile.profile_photo) {
+            profile_photo = await generateSignedUrl(profile.profile_photo, 7200)
+          }
       
           return res.status(201).json({
             message: 'Login succesful',

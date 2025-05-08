@@ -1,6 +1,7 @@
 import multer from "multer";
 import EstablishmentService from "../services/establishment.service.js";
-import { generateSignedUrl } from "../utils/savePicture.js";
+import { generateSignedUrl } from "../utils/signedUrl.js";
+
 
 const service = new EstablishmentService()
 
@@ -23,9 +24,7 @@ class EstablishmentController{
           let profileUrl = null;
           if (newEstablishment.profile_photo) {
             profileUrl = await generateSignedUrl(
-              newEstablishment.profile_photo,
-              60 * 60
-            );
+              newEstablishment.profile_photo,);
           }
     
           return res.status(201).json({

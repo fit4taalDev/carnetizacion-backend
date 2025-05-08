@@ -17,14 +17,29 @@ export const Offers = sequelize.define('offers', {
         allowNull: false,
         type: DataTypes.TEXT,
     },
-    start_date:{
+    conditions: {
         allowNull: false,
-        type: DataTypes.DATE,
+        type: DataTypes.TEXT,
     },
-
     end_date:{
         allowNull: false,
         type: DataTypes.DATE,
+    },
+    discount_applied:{
+        allowNull: false,
+        type: DataTypes.STRING
+    },
+    normal_price: {
+        allowNull: false,
+        type: DataTypes.DECIMAL(10, 2),
+    },
+    discount_price:{
+        allowNull: false,
+        type: DataTypes.DECIMAL(10, 2),
+    },
+    offer_image:{
+        type: DataTypes.TEXT,
+        allowNull: true,
     },
     establishment_id: {
         allowNull: false,
