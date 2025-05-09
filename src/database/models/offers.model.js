@@ -41,6 +41,10 @@ export const Offers = sequelize.define('offers', {
         type: DataTypes.TEXT,
         allowNull: true,
     },
+    active:{
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+    },
     establishment_id: {
         allowNull: false,
         type:DataTypes.UUID,

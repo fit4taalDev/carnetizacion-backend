@@ -9,5 +9,6 @@ export const OfferSchema = Joi.object({
     discount_price: Joi.number().required().precision(2),
     offer_image: Joi.string().required(),
     end_date: Joi.date().required(),
+    active: Joi.boolean().required(),
     student_role_ids: Joi.array().items(Joi.number().integer()).optional()
 })

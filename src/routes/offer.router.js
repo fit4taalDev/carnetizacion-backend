@@ -6,6 +6,7 @@ import OfferController from '../controllers/offer.controller.js';
 import adminAndEstabHandler from '../middlewares/adminAndEstab.handler.js';
 import allRolesHandler from '../middlewares/allRoles.handler.js';
 import { uploadImage } from '../middlewares/saveImage.controller.js';
+import administratorHandler from '../middlewares/administrator.handler.js';
 
 const router = express.Router();
 const controller = new OfferController()
@@ -25,6 +26,18 @@ router.get('/',
 router.get('/:id',
     allRolesHandler,
     controller.findOfferById
+)
+
+router.get('/establishment/:id',
+    administratorHandler,
+    controller.findAllOffersByEstablishmentId
+)
+
+router.put('/:id',
+    validatorHandler(OfferSchema),
+    uploadImage('offer_image'),
+    establishmentHandler,
+    controller.updateOffer
 )
 
 export default router
