@@ -23,6 +23,11 @@ router.get('/',
     controller.findAllOffers
 )
 
+router.get('/establishment',
+    establishmentHandler,
+    controller.findAllByEstablishment
+)
+
 router.get('/:id',
     allRolesHandler,
     controller.findOfferById
@@ -38,6 +43,11 @@ router.put('/:id',
     uploadImage('offer_image'),
     establishmentHandler,
     controller.updateOffer
+)
+
+router.patch('/:id/active',
+    establishmentHandler,
+    controller.updateActive
 )
 
 export default router

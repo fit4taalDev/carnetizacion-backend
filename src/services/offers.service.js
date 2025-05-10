@@ -5,6 +5,7 @@ import { StudentRoles } from "../database/models/studentRoles.model.js";
 import { uploadImage } from "../utils/savePicture.js";
 import { generateSignedUrl } from "../utils/signedUrl.js";
 import { Establishments } from "../database/models/establishments.model.js";
+import { Op } from "sequelize";
 
 class OffersService extends BaseService {
   constructor() {
@@ -41,7 +42,6 @@ class OffersService extends BaseService {
 
 
   async update(id, data, fileBuffer, fileMeta) {
-    // 1) Si hay nueva imagen, subirla y setear data.offer_image
     if (fileBuffer && fileMeta) {
       const imageKey = await uploadImage(
         fileBuffer,
@@ -52,19 +52,14 @@ class OffersService extends BaseService {
       data.offer_image = imageKey
     }
 
-    // 2) Separar roles del resto de campos
     const { student_role_ids, ...offerData } = data
 
-    // 3) Actualizar la oferta
     await super.update(id, offerData)
 
-    // 4) Reemplazar relaciones en la tabla pivote
-    //   - primero borramos las antiguas
     await sequelize.models.offer_student_role.destroy({
       where: { offer_id: id }
     })
 
-    //   - luego añadimos las nuevas (o todas si el array quedó vacío)
     let roles = student_role_ids
     if (!Array.isArray(roles) || roles.length === 0) {
       const all = await StudentRoles.findAll()
@@ -76,7 +71,6 @@ class OffersService extends BaseService {
     }))
     await sequelize.models.offer_student_role.bulkCreate(rows)
 
-    // 5) Devolver la oferta actualizada
     return await Offers.findByPk(id)
   }
 
@@ -96,6 +90,14 @@ class OffersService extends BaseService {
       ]
     })
 
+    const now = new Date()
+    for (const offer of offers) {
+      if (offer.end_date < now && offer.active) {
+        offer.active = false
+        await offer.save()
+      }
+    }
+
     const enriched = await Promise.all(
       offers.map(async inst => {
         const offer = inst.get({ plain: true })
@@ -108,6 +110,52 @@ class OffersService extends BaseService {
 
     return enriched
   }
+
+async findAllByEstablishment(establishmentId, role, search, active) {
+  const whereOffer = {
+    establishment_id: establishmentId,
+    ...(active !== undefined && { active }),
+    ...(search && {
+      [Op.or]: [
+        { title: { [Op.iLike]: `%${search}%` } },
+        { id: !isNaN(Number(search)) ? Number(search) : -1 }
+      ],
+    }),
+  }
+
+  const roleFilter = role ? { name: role } : undefined
+
+  const offers = await this.model.findAll({
+    where: whereOffer,
+    include: [
+      {
+        model: StudentRoles,
+        as: 'student_roles',
+        through: { attributes: [] },
+        required: !!roleFilter,
+        where: roleFilter
+      }
+    ]
+  })
+
+  const now = new Date()
+  for (const offer of offers) {
+    if (offer.end_date < now && offer.active) {
+      offer.active = false
+      await offer.save()
+    }
+  }
+
+  return Promise.all(
+    offers.map(async inst => {
+      const offer = inst.get({ plain: true })
+      if (offer.offer_image) {
+        offer.offer_image = await generateSignedUrl(offer.offer_image, 7200)
+      }
+      return offer
+    })
+  )
+}
 
   async findAllByEstablishmentID(establishmentId, role) {
     const whereOffer = { establishment_id: establishmentId }
@@ -168,6 +216,17 @@ class OffersService extends BaseService {
     offer.student_role_ids = offer.student_roles.map(r => r.id);
   
     return offer;
+  }
+
+  async updateActive(id){
+    const offer = await this.model.findByPk(id);
+    if (!offer) throw new Error(`Offer with id ${id} not found`)
+    
+    offer.active = !offer.active
+    await offer.save()
+
+    return offer.get({ plain: true })
+
   }
 }
 

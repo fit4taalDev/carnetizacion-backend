@@ -58,7 +58,6 @@ class OfferController{
 
     async updateOffer(req, res, next) {
         try {
-          // 1) Normalizar student_role_ids a number[]
           let roles = req.body.student_role_ids
           if (!roles) {
             roles = []
@@ -66,22 +65,19 @@ class OfferController{
             roles = [roles]
           }
           roles = roles.map(r => Number(r))
-    
-          // 2) Preparar data
+
           const data = {
             ...req.body,
             establishment_id: req.user.id,
             student_role_ids: roles
           }
     
-          // 3) Extraer imagen (si viene)
           const file       = req.file
           const fileBuffer = file ? file.buffer : null
           const fileMeta   = file
             ? { filename: file.originalname, mimetype: file.mimetype }
             : null
     
-          // 4) Llamar al servicio de actualización
           const updatedOffer = await service.update(
             req.params.id,
             data,
@@ -89,13 +85,11 @@ class OfferController{
             fileMeta
           )
     
-          // 5) Firmar la URL de la imagen si existe
           let imageUrl = null
           if (updatedOffer.offer_image) {
             imageUrl = await generateSignedUrl(updatedOffer.offer_image, 7200)
           }
     
-          // 6) Responder
           return res.status(200).json({
             message: 'Offer successfully updated',
             offer: {
@@ -127,6 +121,23 @@ class OfferController{
         }
     }
 
+    async findAllByEstablishment(req, res, next) {
+        try {
+          const establishmentId = req.user.id 
+          const search = req.query.search?.toString().trim()  
+          const role = req.query.role?.toString().trim()
+          const activeParam = req.query.active?.toString().trim();
+          let active;
+          if (activeParam === 'true')  active = true;
+          else if (activeParam === 'false') active = false;
+
+          const offers = await service.findAllByEstablishment(establishmentId, role, search, active)
+          return res.status(200).json(offers)
+        } catch (err) {
+          next(err)
+        }
+    }
+
     async findAllOffersByEstablishmentId (req, res, next) {
         const establishment_id = req.params.id
         const role = req.query.role?.toString().trim()
@@ -149,6 +160,17 @@ class OfferController{
             next(error);
         }
     }
-}
+
+    async updateActive (req, res, next){
+        try{
+            const id = req.params.id
+            await service.updateActive(id);
+            return res.status(200).json({ message: 'Status successfully updated' });
+        }catch (error) {
+            next(error);
+        }
+
+    }
+ }
 
 export default OfferController
