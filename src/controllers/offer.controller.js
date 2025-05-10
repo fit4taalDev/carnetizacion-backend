@@ -127,6 +127,8 @@ class OfferController{
           const search = req.query.search?.toString().trim()  
           const role = req.query.role?.toString().trim()
           const activeParam = req.query.active?.toString().trim();
+          const expirationDate = req.query.expirationDate?.toString().trim();
+
           let active;
           if (activeParam === 'true')  active = true;
           else if (activeParam === 'false') active = false;
@@ -134,8 +136,13 @@ class OfferController{
           const dateFrom = req.query.dateFrom || req.query.date_from;
           const dateTo   = req.query.dateTo   || req.query.date_to;
 
+          const validityParam = req.query.validity?.toString().trim();
+          let validity;
+          if (validityParam === 'true') validity = true;
+          else if (validityParam === 'false') validity = false;
 
-          const offers = await service.findAllByEstablishment(establishmentId, role, search, active, dateFrom, dateTo)
+
+          const offers = await service.findAllByEstablishment(establishmentId, role, search, active, dateFrom, dateTo, validity,expirationDate)
           return res.status(200).json(offers)
         } catch (err) {
           next(err)

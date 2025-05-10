@@ -111,7 +111,7 @@ class OffersService extends BaseService {
     return enriched
   }
 
-async findAllByEstablishment(establishmentId, role, search, active, dateFrom, dateTo) {
+async findAllByEstablishment(establishmentId, role, search, active, dateFrom, dateTo, validity, expirationDate) {
   const whereOffer = {
     establishment_id: establishmentId,
     ...(active !== undefined && { active }),
@@ -121,10 +121,11 @@ async findAllByEstablishment(establishmentId, role, search, active, dateFrom, da
         { id: !isNaN(Number(search)) ? Number(search) : -1 }
       ],
     }),
-  }
+  };
 
-  const roleFilter = role ? { name: role } : undefined
-    if (dateFrom || dateTo) {
+  const roleFilter = role ? { name: role } : undefined;
+
+  if (dateFrom || dateTo) {
     whereOffer.end_date = {};
     if (dateFrom) {
       whereOffer.end_date[Op.gte] = new Date(dateFrom);
@@ -135,7 +136,25 @@ async findAllByEstablishment(establishmentId, role, search, active, dateFrom, da
       whereOffer.end_date[Op.lte] = end;
     }
   }
-  
+
+  if (validity === true) {
+    whereOffer[Op.and] = [
+      ...(whereOffer[Op.and] || []),
+      { end_date: { [Op.gte]: new Date() } }
+    ];
+  } else if (validity === false) {
+    whereOffer[Op.and] = [
+      ...(whereOffer[Op.and] || []),
+      { end_date: { [Op.lt]: new Date() } }
+    ];
+  }
+
+  let order = [];
+  if (expirationDate === 'soon') {
+    order = [['end_date', 'ASC']];
+  } else if (expirationDate === 'far') {
+    order = [['end_date', 'DESC']];
+  }
 
   const offers = await this.model.findAll({
     where: whereOffer,
@@ -147,29 +166,29 @@ async findAllByEstablishment(establishmentId, role, search, active, dateFrom, da
         required: !!roleFilter,
         where: roleFilter
       }
-    ]
-  })
+    ],
+    order
+  });
 
-
-
-  const now = new Date()
+  const now = new Date();
   for (const offer of offers) {
     if (offer.end_date < now && offer.active) {
-      offer.active = false
-      await offer.save()
+      offer.active = false;
+      await offer.save();
     }
   }
 
   return Promise.all(
     offers.map(async inst => {
-      const offer = inst.get({ plain: true })
+      const offer = inst.get({ plain: true });
       if (offer.offer_image) {
-        offer.offer_image = await generateSignedUrl(offer.offer_image, 7200)
+        offer.offer_image = await generateSignedUrl(offer.offer_image, 7200);
       }
-      return offer
+      return offer;
     })
-  )
+  );
 }
+
 
   async findAllByEstablishmentID(establishmentId, role) {
     const whereOffer = { establishment_id: establishmentId }
