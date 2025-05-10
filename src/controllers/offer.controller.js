@@ -131,7 +131,11 @@ class OfferController{
           if (activeParam === 'true')  active = true;
           else if (activeParam === 'false') active = false;
 
-          const offers = await service.findAllByEstablishment(establishmentId, role, search, active)
+          const dateFrom = req.query.dateFrom || req.query.date_from;
+          const dateTo   = req.query.dateTo   || req.query.date_to;
+
+
+          const offers = await service.findAllByEstablishment(establishmentId, role, search, active, dateFrom, dateTo)
           return res.status(200).json(offers)
         } catch (err) {
           next(err)

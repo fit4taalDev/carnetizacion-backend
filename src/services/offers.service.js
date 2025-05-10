@@ -111,7 +111,7 @@ class OffersService extends BaseService {
     return enriched
   }
 
-async findAllByEstablishment(establishmentId, role, search, active) {
+async findAllByEstablishment(establishmentId, role, search, active, dateFrom, dateTo) {
   const whereOffer = {
     establishment_id: establishmentId,
     ...(active !== undefined && { active }),
@@ -124,6 +124,18 @@ async findAllByEstablishment(establishmentId, role, search, active) {
   }
 
   const roleFilter = role ? { name: role } : undefined
+    if (dateFrom || dateTo) {
+    whereOffer.end_date = {};
+    if (dateFrom) {
+      whereOffer.end_date[Op.gte] = new Date(dateFrom);
+    }
+    if (dateTo) {
+      const end = new Date(dateTo);
+      end.setHours(23, 59, 59, 999);
+      whereOffer.end_date[Op.lte] = end;
+    }
+  }
+  
 
   const offers = await this.model.findAll({
     where: whereOffer,
@@ -137,6 +149,8 @@ async findAllByEstablishment(establishmentId, role, search, active) {
       }
     ]
   })
+
+
 
   const now = new Date()
   for (const offer of offers) {
