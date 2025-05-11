@@ -4,6 +4,7 @@ import { Students } from "../database/models/students.model.js";
 import { Offers } from "../database/models/offers.model.js";
 import { Establishments } from "../database/models/establishments.model.js";
 import { Op } from "sequelize";
+import { StudentRoles } from "../database/models/studentRoles.model.js";
 
 class OfferRedemptionService extends BaseService{
     constructor(){
@@ -72,6 +73,75 @@ class OfferRedemptionService extends BaseService{
     });
 
     return offersRedemptions
+    }
+
+    async findAllOfferRedemptionByStudentIdEstablihsment(student_id, establishment_id, page = 1 , pageSize = 10){
+    const offset = (page - 1) * pageSize;
+
+    const { count: totalCouponsUsed, rows: redemptions } =
+        await OfferRedemptions.findAndCountAll({
+        where: { student_id },
+        include: [
+            {
+            model: Offers,
+            where: { establishment_id },
+            attributes: ['id', 'title', 'end_date']
+            },
+            {
+            model: Students,
+            attributes: ['student_id', 'student_role_id']
+            }
+        ],
+        order: [['createdAt', 'DESC']],
+        limit:  pageSize,
+        offset,
+        distinct: true
+        });
+
+    const now          = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const couponsThisMonth = await OfferRedemptions.count({
+        where: {
+        student_id,
+        createdAt: { [Op.gte]: startOfMonth }
+        },
+        include: [
+        {
+            model: Offers,
+            where: { establishment_id },
+            attributes: []
+        }
+        ],
+        distinct: true
+    });
+
+    const redeemedIds = redemptions.map(r => r.offer_id);
+    const soonLimit = new Date(now);
+    soonLimit.setDate(now.getDate() + 7);
+    soonLimit.setHours(23, 59, 59, 999);
+
+    const discountsAboutToExpire = await Offers.count({
+        where: {
+        establishment_id,
+        end_date: { [Op.between]: [now, soonLimit] },
+        ...(redeemedIds.length && { id: { [Op.notIn]: redeemedIds } })
+        }
+    });
+
+    const totalPages = Math.ceil(totalCouponsUsed / pageSize);
+
+    return {
+        redemptions,             
+        totalCouponsUsed,         
+        couponsThisMonth,         
+        discountsAboutToExpire,   
+        pagination: {
+        page,
+        pageSize,
+        totalPages,
+        totalItems: totalCouponsUsed
+        }
+    };
     }
     
 }

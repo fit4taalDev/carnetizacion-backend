@@ -35,6 +35,20 @@ class OfferRedemptionController{
             next(error);
         }
     }
+
+    async getOfferRedemptionByStudentIdEstablishment(req, res, next){
+        try{
+            const establishmentId = req.user.id 
+            const student_id = req.params.id
+            const page = req.query.page
+            const pageSize = req.query.pageSize
+        
+            const offerRedemptionByStudentIdEstablishment = await service.findAllOfferRedemptionByStudentIdEstablihsment(student_id, establishmentId, page, pageSize)
+            return res.status(200).json(offerRedemptionByStudentIdEstablishment)
+        }catch (error) {
+            next(error);
+        }
+    }
 }
 
 export default OfferRedemptionController

@@ -29,5 +29,11 @@ export const OfferRedemptions = sequelize.define('offer_redemptions', {
 
 },{
     timestamps: true,
-    updatedAt: false 
+    updatedAt: false ,
+    indexes: [
+      {
+        unique: false,
+        fields: ['offer_id', 'student_id']
+      }
+    ]
 })

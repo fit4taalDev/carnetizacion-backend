@@ -45,6 +45,11 @@ export const Offers = sequelize.define('offers', {
         type: DataTypes.BOOLEAN,
         allowNull: false,
     },
+    max_redemptions_per_student: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1   // por defecto sólo 1 canje por estudiante
+    },
     establishment_id: {
         allowNull: false,
         type:DataTypes.UUID,
@@ -53,4 +58,5 @@ export const Offers = sequelize.define('offers', {
             key: "id"
         }
     }
+    
 })
