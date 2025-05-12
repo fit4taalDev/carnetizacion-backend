@@ -10,7 +10,9 @@ class ScanService extends BaseService{
     }
 
     async create (data){
-        const existingStudent = await Students.findByPk(data.student_id);
+        const existingStudent = await Students.findOne({
+            where:{student_id: data.student_id}
+        })
 
         if (!existingStudent) {
             throw new Error('The student is not registered');
@@ -23,7 +25,8 @@ class ScanService extends BaseService{
         }
 
         const scanInfo = {
-            ...data,
+            student_id: existingStudent.id,
+            establishment_id: data.establishment_id,
             scanned_at: new Date()
         }
 

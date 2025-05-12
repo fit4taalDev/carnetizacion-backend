@@ -1,12 +1,25 @@
 import ScanService from "../services/scans.service.js";
+import CryptoJS from 'crypto-js';
 
 
 const service = new ScanService()
+
+const SECRET_KEY   = process.env.QR_KEY;
 
 class ScanController{
     async create (req, res, next){
         try{
             const body = req.body
+            const { student_id, sig } = req.body;
+
+            const expectedSig = CryptoJS
+            .HmacSHA256(student_id, SECRET_KEY)
+            .toString(CryptoJS.enc.Base64);
+
+            if (sig !== expectedSig) {
+                return res.status(401).json({ message: 'Invalid QR signature' });
+            }
+
             const establishment_id = req.user.id
             const data = {...body, establishment_id:establishment_id}
             const newScan = await service.create(data)

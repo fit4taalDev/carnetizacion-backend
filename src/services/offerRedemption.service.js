@@ -2,9 +2,7 @@ import BaseService from "./base.service.js";
 import { OfferRedemptions } from "../database/models/offerRedemptions.js";
 import { Students } from "../database/models/students.model.js";
 import { Offers } from "../database/models/offers.model.js";
-import { Establishments } from "../database/models/establishments.model.js";
 import { Op } from "sequelize";
-import { StudentRoles } from "../database/models/studentRoles.model.js";
 
 class OfferRedemptionService extends BaseService{
     constructor(){
@@ -58,7 +56,7 @@ class OfferRedemptionService extends BaseService{
         include: [
             {
                 model: Students,
-                attributes: ['student_id', 'student_role_id'],
+                attributes: ['student_id', 'student_role_id','id'],
                 ...(studentRoleId !== undefined
                 ? { where: { student_role_id: studentRoleId }, required: true }
                 : {})
@@ -85,11 +83,11 @@ class OfferRedemptionService extends BaseService{
             {
             model: Offers,
             where: { establishment_id },
-            attributes: ['id', 'title', 'end_date']
+            attributes: ['id', 'title', 'end_date','normal_price','discount_price']
             },
             {
             model: Students,
-            attributes: ['student_id', 'student_role_id']
+            attributes: ['student_id', 'student_role_id','id']
             }
         ],
         order: [['createdAt', 'DESC']],
