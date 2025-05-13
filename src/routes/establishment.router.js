@@ -4,6 +4,7 @@ import validatorHandler from '../middlewares/validator.handler.js';
 import administratorHandler from '../middlewares/administrator.handler.js';
 import { establishmentSchema } from '../schemas/establishment.schema.js';
 import { uploadImage } from '../middlewares/saveImage.controller.js';
+import studentHandler from '../middlewares/studentHandler.js';
 
 const router = express.Router();
 const controller = new EstablishmentController()
@@ -20,9 +21,18 @@ router.get('/',
     controller.findAllEstablishments
 )
 
+router.get('/student',
+    studentHandler,
+    controller.findAllEstablishmentStudent
+)
+
 router.get('/:id',
     administratorHandler,
     controller.findEstablishmentById
+)
+
+router.get('/student',
+    controller.findAllEstablishmentStudent
 )
 
 export default router

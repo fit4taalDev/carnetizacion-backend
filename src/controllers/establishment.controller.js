@@ -83,6 +83,18 @@ class EstablishmentController{
             next(error);
         }
     }
+
+    async findAllEstablishmentStudent (req, res, next){
+      try{
+        const search = req.query.search.toString().trim()
+        const category = req.query.category?.toString().trim()
+
+        const establishments = await service.findAllEstablishmentStudent(search, category)
+        return res.status(200).json(establishments)
+      }catch (error) {
+            next(error);
+        }
+    }
 }
 
 export default EstablishmentController

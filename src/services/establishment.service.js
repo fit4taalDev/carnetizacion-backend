@@ -7,7 +7,7 @@ import { EstablishmentRoles } from "../database/models/establishmentRoles.model.
 import { generateEstablishmentQRCode } from "../utils/establishmentQR.util.js";
 import { uploadImage } from "../utils/savePicture.js";
 import { sequelize } from "../database/sequelize.js";
-import { Op } from "sequelize";
+import { Op, where } from "sequelize";
 import { Storage } from "@google-cloud/storage";
 import { EstablishmentCategories } from "../database/models/establishmentCategories.model.js";
 import { generateSignedUrl } from "../utils/signedUrl.js";
@@ -187,8 +187,64 @@ class EstablishmentService extends BaseService{
         })
     }
 
+   async findAllEstablishmentStudent(search,category) {
+   const where = { establishment_status_id: 0 }
 
-    async
+    // 2) Filtro por nombre
+    if (search) {
+      where.establishment_name = { [Op.iLike]: `%${search}%` }
+    }
+
+    // 3) Filtro por categoría
+    //    asumimos que category viene como '0','1','2',... o '' para "Todos"
+    if (category !== '') {
+      const catId = parseInt(category, 10)
+      if (!Number.isNaN(catId)) {
+        where.establishment_category_id = catId
+      }
+    }
+
+    // 4) Consulta con subconsulta para contar ofertas
+    const establishments = await this.model.findAll({
+      where,
+      attributes: [
+        'id',
+        'establishment_name',
+        'establishment_address',
+        'description',
+        'profile_photo',
+        'establishment_category_id',
+        [
+          sequelize.literal(`(
+            SELECT COUNT(*)
+            FROM offers
+            WHERE offers.establishment_id = establishments.id
+          )`),
+          'offersCount'
+        ]
+      ]
+    })
+
+    // 5) Enriquecer con URLs firmadas y parseo de offersCount
+    const enriched = await Promise.all(
+      establishments.map(async inst => {
+        const e = inst.get({ plain: true })
+        e.offersCount = parseInt(e.offersCount, 10)
+
+        if (e.qr_img) {
+          e.qr_img = await generateSignedUrl(e.qr_img, 7200)
+        }
+        if (e.profile_photo) {
+          e.profile_photo = await generateSignedUrl(e.profile_photo, 7200)
+        }
+        return e
+      })
+    )
+
+    return enriched
+  }
+
+
 }
 
 export default EstablishmentService
