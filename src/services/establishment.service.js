@@ -12,7 +12,6 @@ import { Storage } from "@google-cloud/storage";
 import { EstablishmentCategories } from "../database/models/establishmentCategories.model.js";
 import { generateSignedUrl } from "../utils/signedUrl.js";
 import { Offers } from "../database/models/offers.model.js";
-import { StudentRoles } from "../database/models/studentRoles.model.js";
 
 
 const storage = new Storage({ keyFilename: process.env.KEY_FILE_NAME });

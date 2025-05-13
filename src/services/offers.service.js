@@ -235,6 +235,10 @@ async findAllByEstablishment(establishmentId, role, search, active, dateFrom, da
           as: 'student_roles',
           through: { attributes: [] },
           required: false
+        },
+        {
+          model: Establishments,
+          attributes: ['establishment_name', 'establishment_address','establishment_category_id', 'description']
         }
       ]
     });

@@ -8,7 +8,7 @@ class OfferRedemptionController{
             const body = req.body;
             const student_id = req.user.id
             const data = {...body, student_id:student_id}
-            const newOfferRedemption = await service.create(data)
+            const newOfferRedemption = await service.createOfferRedemption(data)
             
     
             return res.status(201).json({

@@ -2,16 +2,73 @@ import BaseService from "./base.service.js";
 import { OfferRedemptions } from "../database/models/offerRedemptions.js";
 import { Students } from "../database/models/students.model.js";
 import { Offers } from "../database/models/offers.model.js";
-import { Op } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
+import { StudentRoles } from "../database/models/studentRoles.model.js";
+import { sequelize } from "../database/sequelize.js";
 
 class OfferRedemptionService extends BaseService{
     constructor(){
         super(OfferRedemptions)
     }
 
-    async createEstablishment(data){
-        return super.create(data)
+async createOfferRedemption({ student_id, offer_id }) {
+    const student = await Students.findByPk(student_id)
+    if (!student) {
+      const err = new Error('Student not found')
+      err.status = 404
+      throw err
     }
+
+    const offer = await Offers.findByPk(offer_id)
+    if (!offer) {
+      const err = new Error('Offer not found')
+      err.status = 404
+      throw err
+    }
+
+    if (!offer.active) {
+      const err = new Error('Offer is not active')
+      err.status = 400
+      throw err
+    }
+
+    if (new Date(offer.end_date) < new Date()) {
+      const err = new Error('Offer has expired')
+      err.status = 400
+      throw err
+    }
+
+    const rows = await sequelize.query(
+      `SELECT 1
+       FROM offer_student_role
+       WHERE offer_id = :offer_id
+         AND student_role_id = :role_id
+       LIMIT 1`,
+      {
+        replacements: {
+          offer_id,
+          role_id: student.student_role_id
+        },
+        type: QueryTypes.SELECT
+      }
+    )
+    if (rows.length === 0) {
+      const err = new Error('You are not eligible to redeem this offer')
+      err.status = 403
+      throw err
+    }
+
+    const existing = await OfferRedemptions.findOne({
+      where: { student_id, offer_id }
+    })
+    if (existing) {
+      const err = new Error('Offer already redeemed by this student')
+      err.status = 400
+      throw err
+    }
+
+    return super.create({ student_id, offer_id })
+  }
 
     async findAllOffersByEstablishment(establishment_id, search, role, redemptionDate, dateFrom, dateTo){
     const whereRedemptions = {};
