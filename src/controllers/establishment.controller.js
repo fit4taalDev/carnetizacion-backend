@@ -98,8 +98,12 @@ class EstablishmentController{
 
     async findEstablishmentByIdStudent (req, res, next){
       try{
-        const id = req.params.id
-        const establishment = await service.findByIdStudent(id)
+        const establishment_id = req.params.id
+        const student_id = req.user.id
+        const establishment = await service.findByIdStudent(
+        establishment_id,
+        student_id
+      )
         return res.status(200).json(establishment)
       } catch (error) {
           next(error);
