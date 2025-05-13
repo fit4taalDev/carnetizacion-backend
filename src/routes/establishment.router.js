@@ -26,6 +26,11 @@ router.get('/student',
     controller.findAllEstablishmentStudent
 )
 
+router.get('/student/:id',
+    studentHandler,
+    controller.findEstablishmentByIdStudent
+)
+
 router.get('/:id',
     administratorHandler,
     controller.findEstablishmentById

@@ -7,10 +7,12 @@ import { EstablishmentRoles } from "../database/models/establishmentRoles.model.
 import { generateEstablishmentQRCode } from "../utils/establishmentQR.util.js";
 import { uploadImage } from "../utils/savePicture.js";
 import { sequelize } from "../database/sequelize.js";
-import { Op, where } from "sequelize";
+import { Op, QueryTypes } from "sequelize";
 import { Storage } from "@google-cloud/storage";
 import { EstablishmentCategories } from "../database/models/establishmentCategories.model.js";
 import { generateSignedUrl } from "../utils/signedUrl.js";
+import { Offers } from "../database/models/offers.model.js";
+import { StudentRoles } from "../database/models/studentRoles.model.js";
 
 
 const storage = new Storage({ keyFilename: process.env.KEY_FILE_NAME });
@@ -190,21 +192,16 @@ class EstablishmentService extends BaseService{
    async findAllEstablishmentStudent(search,category) {
    const where = { establishment_status_id: 0 }
 
-    // 2) Filtro por nombre
     if (search) {
       where.establishment_name = { [Op.iLike]: `%${search}%` }
     }
 
-    // 3) Filtro por categoría
-    //    asumimos que category viene como '0','1','2',... o '' para "Todos"
     if (category !== '') {
       const catId = parseInt(category, 10)
       if (!Number.isNaN(catId)) {
         where.establishment_category_id = catId
       }
     }
-
-    // 4) Consulta con subconsulta para contar ofertas
     const establishments = await this.model.findAll({
       where,
       attributes: [
@@ -225,7 +222,6 @@ class EstablishmentService extends BaseService{
       ]
     })
 
-    // 5) Enriquecer con URLs firmadas y parseo de offersCount
     const enriched = await Promise.all(
       establishments.map(async inst => {
         const e = inst.get({ plain: true })
@@ -244,7 +240,54 @@ class EstablishmentService extends BaseService{
     return enriched
   }
 
+ async findByIdStudent(id) {
+    const inst = await this.model.findOne({
+      where: { id },
+      attributes: ['id','establishment_name','establishment_address','description','profile_photo','establishment_category_id'],
+      include: [
+        {
+          model: Offers,
+          attributes: ['id','title','description','conditions','end_date','discount_applied','normal_price','discount_price','offer_image','active'],
+          where: { active: true, end_date: { [Op.gte]: new Date() } },
+          required: false
+        }
+      ]
+    })
+    if (!inst) return null
 
+    const establishment = inst.get({ plain: true })
+    if (establishment.profile_photo) {
+      establishment.profile_photo = await generateSignedUrl(establishment.profile_photo, 7200)
+    }
+
+    establishment.offers = await Promise.all(
+      (establishment.offers || []).map(async o => ({
+        ...o,
+        offer_image: o.offer_image ? await generateSignedUrl(o.offer_image, 7200) : null
+      }))
+    )
+
+    const offerIds = establishment.offers.map(o => o.id)
+    let roleMap = {}
+    if (offerIds.length) {
+      const rows = await sequelize.query(
+        `SELECT offer_id, student_role_id FROM offer_student_role WHERE offer_id IN (:offerIds)`,
+        { replacements: { offerIds }, type: QueryTypes.SELECT }
+      )
+      roleMap = rows.reduce((acc, { offer_id, student_role_id }) => {
+        acc[offer_id] = acc[offer_id] || []
+        acc[offer_id].push(student_role_id)
+        return acc
+      }, {})
+    }
+
+    establishment.offers = establishment.offers.map(o => ({
+      ...o,
+      student_role_ids: roleMap[o.id] || []
+    }))
+
+    return establishment
+  }
 }
 
 export default EstablishmentService

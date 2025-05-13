@@ -95,6 +95,16 @@ class EstablishmentController{
             next(error);
         }
     }
+
+    async findEstablishmentByIdStudent (req, res, next){
+      try{
+        const id = req.params.id
+        const establishment = await service.findByIdStudent(id)
+        return res.status(200).json(establishment)
+      } catch (error) {
+          next(error);
+      }
+    }
 }
 
 export default EstablishmentController
