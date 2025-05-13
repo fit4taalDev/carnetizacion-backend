@@ -2,9 +2,10 @@ import BaseService from "./base.service.js";
 import { OfferRedemptions } from "../database/models/offerRedemptions.js";
 import { Students } from "../database/models/students.model.js";
 import { Offers } from "../database/models/offers.model.js";
-import { Op, QueryTypes } from "sequelize";
+import { Op, QueryTypes, where } from "sequelize";
 import { StudentRoles } from "../database/models/studentRoles.model.js";
 import { sequelize } from "../database/sequelize.js";
+import { Establishments } from "../database/models/establishments.model.js";
 
 class OfferRedemptionService extends BaseService{
     constructor(){
@@ -199,6 +200,63 @@ async createOfferRedemption({ student_id, offer_id }) {
     };
     }
     
+async findAllOffersRedemptionsByStudent(student_id, page = 1, pageSize = 10) {
+    const offset = (page - 1) * pageSize
+
+    // 1) Paginación + conteo total
+    const { count: totalOfferRedemptions, rows } = await this.model.findAndCountAll({
+      where: { student_id },
+      limit:  pageSize,
+      offset,
+      order: [['createdAt', 'DESC']],
+      include: [
+        {
+          model: Offers,
+          attributes: [
+            'title',
+            'normal_price',
+            'discount_price',
+            'establishment_id'
+          ],
+          include: [
+            {
+              model: Establishments,
+              attributes: ['establishment_name']
+            }
+          ]
+        }
+      ]
+    })
+
+    // 2) Sumar todo lo ahorrado en TODAS las redenciones de este estudiante
+    const [ sumRow ] = await sequelize.query(
+      `
+      SELECT
+        COALESCE(SUM(o.normal_price - o.discount_price), 0) AS total_saved
+      FROM offer_redemptions r
+      JOIN offers o ON o.id = r.offer_id
+      WHERE r.student_id = :student_id
+      `,
+      {
+        replacements: { student_id },
+        type: QueryTypes.SELECT
+      }
+    )
+    const totalSaved = parseFloat(sumRow.total_saved)
+
+    // 3) Empaquetar la data que devuelves al controller
+    const data = rows.map(r => ({
+      title:            r.offer.title,
+      normal_price:     r.offer.normal_price,
+      discount_price:   r.offer.discount_price,
+      establishment_id: r.offer.establishment_id,
+      establishment_name: r.offer.establishment?.establishment_name ?? null,
+      redeemedAt:       r.createdAt
+    }))
+
+    return { totalOfferRedemptions, totalSaved, page, pageSize, data }
+  }
+
 }
 
 export default OfferRedemptionService

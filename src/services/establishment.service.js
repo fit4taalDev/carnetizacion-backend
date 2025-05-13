@@ -241,7 +241,6 @@ class EstablishmentService extends BaseService{
   }
 
  async findByIdStudent(establishment_id, student_id) {
-    // 1) Cargar establecimiento con sus ofertas activas y vigentes
     const inst = await this.model.findOne({
       where: { id: establishment_id },
       attributes: [
@@ -275,7 +274,6 @@ class EstablishmentService extends BaseService{
     })
     if (!inst) return null
 
-    // 2) Serializar y firmar imágenes
     const establishment = inst.get({ plain: true })
     if (establishment.profile_photo) {
       establishment.profile_photo = await generateSignedUrl(
@@ -291,7 +289,6 @@ class EstablishmentService extends BaseService{
       }))
     )
 
-    // 3) Obtener student_role_ids de cada oferta
     const offerIds = establishment.offers.map(o => o.id)
     let roleMap = {}
     if (offerIds.length) {
@@ -315,7 +312,6 @@ class EstablishmentService extends BaseService{
       student_role_ids: roleMap[o.id] || []
     }))
 
-    // 4) Consultar redenciones previas de este estudiante
     const redeemed = await OfferRedemptions.findAll({
       where: {
         student_id,
@@ -326,7 +322,6 @@ class EstablishmentService extends BaseService{
     })
     const redeemedIds = redeemed.map(r => r.offer_id)
 
-    // 5) Filtrar solo ofertas no redimidas
     establishment.offers = establishment.offers.filter(
       o => !redeemedIds.includes(o.id)
     )

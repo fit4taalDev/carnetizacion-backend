@@ -24,5 +24,9 @@ router.get('/establishment/student/:id',
     controller.getOfferRedemptionByStudentIdEstablishment
 )
 
+router.get('/student',
+    studentHandler,
+    controller.findByStudent
+)
 
 export default router
