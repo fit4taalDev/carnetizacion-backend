@@ -11,6 +11,9 @@
     "type": "git",
     "url": "git+https://github.com/fit4taalDev/carnetizacion-backend.git"
   },
+  "engines": {
+   "node": "18.x"
+  },
   "author": "Fit4taal. Pablo Ruiz",
   "license": "ISC",
   "bugs": {
