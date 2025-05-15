@@ -7,9 +7,12 @@ import { generateQRCode } from "../utils/generateQR.utils.js";
 import { StudentRoles } from "../database/models/studentRoles.model.js";
 import { uploadImage } from "../utils/savePicture.js";
 import { Programs } from "../database/models/programs.model.js";
-import { Op } from 'sequelize';
+import { Op, QueryTypes } from 'sequelize';
 import { Storage } from "@google-cloud/storage";
 import { generateSignedUrl } from "../utils/signedUrl.js";
+import { OfferRedemptions } from "../database/models/offerRedemptions.js";
+import { Offers } from "../database/models/offers.model.js";
+import { Establishments } from "../database/models/establishments.model.js";
 
 const storage = new Storage({ keyFilename: process.env.KEY_FILE_NAME });
 const bucket  = storage.bucket(process.env.GCP_BUCKET_NAME);
@@ -139,28 +142,160 @@ class StudentService extends BaseService {
           return enriched
         
     }
-    async findById(id) {
+  async findById(id, page = 1, pageSize = 10) {
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      const endOfMonth = new Date(
+        now.getFullYear(),
+        now.getMonth() + 1,
+        0, 23, 59, 59, 999
+      );
+      const nextWeek = new Date(now);
+      nextWeek.setDate(now.getDate() + 7);
+
+      // Obtener estudiante con rol y usuario
       const inst = await this.model.findOne({
         where: { id },
         include: [
-          { model: StudentRoles, attributes: ['name'] },
-          { model: Users,attributes: ['email'] }
+          { model: StudentRoles, attributes: ['id', 'name'] },
+          { model: Users, attributes: ['email'] }
         ],
-        attributes: {
-          exclude: ['user_id']
-        }
+        attributes: { exclude: ['user_id'] }
       });
       if (!inst) return null;
-    
       const student = inst.get({ plain: true });
-    
+
+      // Firmar URLs de imágenes
       if (student.qr_img) {
         student.qr_img = await generateSignedUrl(student.qr_img, 7200);
       }
       if (student.profile_photo) {
         student.profile_photo = await generateSignedUrl(student.profile_photo, 7200);
       }
-    
+
+      // ID de rol del estudiante
+      const roleId = student.student_role_id;
+
+      // Total de cupones redimidos este mes
+      const [usedRow] = await sequelize.query(
+        `
+        SELECT COUNT(*) AS coupons_this_month
+          FROM public.offer_redemptions
+        WHERE student_id = :studentId
+          AND "createdAt" BETWEEN :start AND :end
+        `,
+        {
+          replacements: {
+            studentId: id,
+            start: startOfMonth,
+            end: endOfMonth
+          },
+          type: QueryTypes.SELECT
+        }
+      );
+      const couponsThisMonth = parseInt(usedRow.coupons_this_month, 10);
+
+      // Total de cupones disponibles (no expirados y por rol)
+      const [availableRow] = await sequelize.query(
+        `
+        SELECT COUNT(DISTINCT osr.offer_id) AS total_available
+          FROM public.offer_student_role osr
+          JOIN public.offers o
+            ON o.id = osr.offer_id
+        WHERE osr.student_role_id = :roleId
+          AND o.end_date >= :now
+        `,
+        {
+          replacements: { roleId, now },
+          type: QueryTypes.SELECT
+        }
+      );
+      const totalAvailable = parseInt(availableRow.total_available, 10);
+
+      // Cupones que vencen en los próximos 7 días
+      const [soonRow] = await sequelize.query(
+        `
+        SELECT COUNT(*) AS expiring_soon_count
+          FROM public.offer_redemptions orr
+          JOIN public.offers o
+            ON o.id = orr.offer_id
+          JOIN public.offer_student_role osr
+            ON osr.offer_id = o.id
+        WHERE orr.student_id = :studentId
+          AND osr.student_role_id = :roleId
+          AND o.end_date BETWEEN :now AND :nextWeek
+        `,
+        {
+          replacements: {
+            studentId: id,
+            roleId,
+            now,
+            nextWeek
+          },
+          type: QueryTypes.SELECT
+        }
+      );
+      const expiringSoonCount = parseInt(soonRow.expiring_soon_count, 10);
+
+      // Total de cupones usados en toda la vida
+      const [totalRow] = await sequelize.query(
+        `
+        SELECT COUNT(*) AS total_coupons_used
+          FROM public.offer_redemptions
+        WHERE student_id = :studentId
+        `,
+        {
+          replacements: { studentId: id },
+          type: QueryTypes.SELECT
+        }
+      );
+      const totalCouponsUsed = parseInt(totalRow.total_coupons_used, 10);
+
+      // Nivel de uso: bajo/medio/alto según cupones usados este mes vs disponibles
+      const ratio = totalAvailable > 0
+        ? couponsThisMonth / totalAvailable
+        : 0;
+      let usageLevel = 'Low';
+      if (ratio >= 0.66) {
+        usageLevel = 'High';
+      } else if (ratio >= 0.33) {
+        usageLevel = 'Medium';
+      }
+
+      // Paginación de redenciones
+      const offset = (page - 1) * pageSize;
+      const { count: totalRedemptions, rows: redemptionRows } = await OfferRedemptions.findAndCountAll({
+        where: { student_id: id },
+        limit: pageSize,
+        offset,
+        order: [['createdAt', 'DESC']],
+        include: [
+          {
+            model: Offers,
+            attributes: [
+              'establishment_id',
+              'title',
+              'normal_price',
+              'discount_price',
+              'end_date'
+            ],
+            include: [
+              { model: Establishments, attributes: ['establishment_name'] }
+            ]
+          }
+        ]
+      });
+      const redemptions = redemptionRows.map(r => r.get({ plain: true }));
+      const totalPages = Math.ceil(totalRedemptions / pageSize);
+
+      student.couponsThisMonth = couponsThisMonth;
+      student.totalAvailable = totalAvailable;
+      student.couponUsageLevel = usageLevel;
+      student.expiringSoonCount = expiringSoonCount;
+      student.totalCouponsUsed = totalCouponsUsed;
+      student.redemptions = redemptions;
+      student.pagination = { page, pageSize, totalPages, totalRedemptions };
+
       return student;
     }
 }

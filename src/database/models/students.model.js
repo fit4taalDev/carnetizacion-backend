@@ -1,4 +1,4 @@
-import { DataTypes } from "sequelize";
+import { DataTypes, Sequelize } from "sequelize";
 import { sequelize } from "../sequelize.js";
 import { StudentRoles } from "./studentRoles.model.js";
 import { Users } from "./users.model.js";
@@ -61,6 +61,11 @@ export const Students = sequelize.define('students', {
             key: 'id'
         }
     },
+    expiration_date: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal(`CURRENT_TIMESTAMP + INTERVAL '1 year'`)
+    },
     user_id:{
         allowNull: false,
         type:DataTypes.UUID,
@@ -72,5 +77,12 @@ export const Students = sequelize.define('students', {
 
 },{
     timestamps: true,
-    updatedAt: false 
+    updatedAt: false ,
+    hooks: {
+    beforeCreate(instance) {
+      const expiration = new Date();
+      expiration.setFullYear(expiration.getFullYear() + 1); 
+      instance.expiration_date = expiration;
+    }
+  }
 })

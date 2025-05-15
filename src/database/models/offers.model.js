@@ -48,7 +48,7 @@ export const Offers = sequelize.define('offers', {
     max_redemptions_per_student: {
         type: DataTypes.INTEGER,
         allowNull: false,
-        defaultValue: 1   // por defecto sólo 1 canje por estudiante
+        defaultValue: 1   
     },
     establishment_id: {
         allowNull: false,
