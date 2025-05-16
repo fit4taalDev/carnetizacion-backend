@@ -66,82 +66,89 @@ class StudentService extends BaseService {
         });
       }
 
-    async findAllStudents(role, fullname, active, programId, dateFrom, dateTo) {
-        const whereStudents = {}
-
-        if (fullname) {
-            whereStudents.fullname = { [Op.iLike]: `%${fullname}%` };
-          }
-
-        if (active === 'true') {
-        whereStudents.active = true;
-        } else if (active === 'false') {
-        whereStudents.active = false;
+      async findAllStudents(role, fullname, active, programId, dateFrom, dateTo, page = 1, pageSize = 10) {
+      const whereStudents = {};
+      if (fullname) {
+        whereStudents.fullname = { [Op.iLike]: `%${fullname}%` };
+      }
+      if (active === 'true')       whereStudents.active = true;
+      else if (active === 'false') whereStudents.active = false;
+      if (programId != null && !isNaN(programId)) {
+        whereStudents.program_id = programId;
+      }
+      if (dateFrom || dateTo) {
+        whereStudents.createdAt = {};
+        if (dateFrom) {
+          whereStudents.createdAt[Op.gte] = new Date(dateFrom);
         }
-        if (programId !== undefined && !isNaN(programId)) {
-            whereStudents.program_id = programId;
+        if (dateTo) {
+          const end = new Date(dateTo);
+          end.setHours(23,59,59,999);
+          whereStudents.createdAt[Op.lte] = end;
         }
+      }
 
-        const studentRolesInclude = {
-            model: StudentRoles,
-            attributes: ['name'],
-            ...(role
-              ? { where: { name: role }, required: true }
-              : { required: false })
-        };
+      const studentRolesInclude = {
+        model: StudentRoles,
+        attributes: ['name'],
+        required: Boolean(role),
+        ...(role && { where: { name: role } })
+      };
 
-        if (dateFrom || dateTo) {
-            whereStudents.createdAt = {};
-            if (dateFrom) {
-              whereStudents.createdAt[Op.gte] = new Date(dateFrom);
-            }
-            if (dateTo) {
-              const end = new Date(dateTo);
-              end.setHours(23, 59, 59, 999);
-              whereStudents.createdAt[Op.lte] = end;
-            }
-          }
-          
-          const students = await Students.findAll({
-            where: whereStudents,
-            attributes: {
-              include: [
-                [
-                  sequelize.literal(`(
-                    SELECT COUNT(*)
-                    FROM offer_redemptions AS ordr
-                    WHERE ordr.student_id = "students"."id"
-                  )`),
-                  'offerRedemptionsCount'
-                ]
-              ],
-              exclude: ['user_id', 'student_role_id', 'program_id']
-            },
-            include: [
-              { model: Users,        attributes: ['email'] },
-              studentRolesInclude,
-              { model: Programs,     attributes: ['name'] }
+      const offset = (page - 1) * pageSize;
+
+      const { count: totalItems, rows } = await Students.findAndCountAll({
+        where: whereStudents,
+        order: [['student_id', 'DESC']],  
+        limit: pageSize,
+        offset,
+        attributes: {
+          include: [
+            [
+              sequelize.literal(`(
+                SELECT COUNT(*)
+                FROM public.offer_redemptions AS ordr
+                WHERE ordr.student_id = "students"."id"
+              )`),
+              'offerRedemptionsCount'
             ]
-          });
+          ],
+          exclude: ['user_id', 'student_role_id', 'program_id']
+        },
+        include: [
+          { model: Users, attributes: ['email'] },
+          studentRolesInclude,
+          { model: Programs, attributes: ['name'] }
+        ]
+      });
 
-          const enriched = await Promise.all(
-            students.map(async inst => {
-              const student = inst.get({ plain: true })
-        
-              if (student.qr_img) {
-                student.qr_img = await generateSignedUrl(student.qr_img, 7200)
-              }
-              if (student.profile_photo) {
-                student.profile_photo = await generateSignedUrl(student.profile_photo, 7200)
-              }
-        
-              return student
-            })
-          )
-        
-          return enriched
-        
-    }
+    const enriched = await Promise.all(
+        rows.map(async inst => {
+          const student = inst.get({ plain: true });
+          if (student.qr_img) {
+            student.qr_img = await generateSignedUrl(student.qr_img, 7200);
+          }
+          if (student.profile_photo) {
+            student.profile_photo = await generateSignedUrl(student.profile_photo, 7200);
+          }
+          return student;
+        })
+    );
+
+    const totalPages = Math.ceil(totalItems / pageSize);
+
+    return {
+      data: enriched,
+      pagination: {
+        page,
+        pageSize,
+        totalItems,
+        totalPages
+      }
+    };
+  }
+
+    
   async findById(id, page = 1, pageSize = 10) {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -264,7 +271,7 @@ class StudentService extends BaseService {
 
       // Paginación de redenciones
       const offset = (page - 1) * pageSize;
-      const { count: totalRedemptions, rows: redemptionRows } = await OfferRedemptions.findAndCountAll({
+      const { count: totalItems, rows: redemptionRows } = await OfferRedemptions.findAndCountAll({
         where: { student_id: id },
         limit: pageSize,
         offset,
@@ -286,7 +293,7 @@ class StudentService extends BaseService {
         ]
       });
       const redemptions = redemptionRows.map(r => r.get({ plain: true }));
-      const totalPages = Math.ceil(totalRedemptions / pageSize);
+      const totalPages = Math.ceil(totalItems / pageSize);
 
       student.couponsThisMonth = couponsThisMonth;
       student.totalAvailable = totalAvailable;
@@ -294,7 +301,7 @@ class StudentService extends BaseService {
       student.expiringSoonCount = expiringSoonCount;
       student.totalCouponsUsed = totalCouponsUsed;
       student.redemptions = redemptions;
-      student.pagination = { page, pageSize, totalPages, totalRedemptions };
+      student.pagination = { page, pageSize, totalPages, totalItems };
 
       return student;
     }

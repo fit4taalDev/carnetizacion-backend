@@ -190,39 +190,61 @@ async findAllByEstablishment(establishmentId, role, search, active, dateFrom, da
 }
 
 
-  async findAllByEstablishmentID(establishmentId, role) {
-    const whereOffer = { establishment_id: establishmentId }
-    const roleFilter = role ? { name: role } : undefined
+async findAllByEstablishmentID(establishmentId, role, page = 1, pageSize = 10, status = 'all') {
 
-    const offers = await this.model.findAll({
+    page = Number.isInteger(page) && page > 0 ? page : 1;
+    pageSize = Number.isInteger(pageSize) && pageSize > 0 ? pageSize : 10;
+
+    const whereOffer = { establishment_id: establishmentId };
+
+
+    if (status === 'active') {
+      whereOffer.active = true;
+    } else if (status === 'inactive') {
+      whereOffer.active = false;
+    }
+
+    const roleFilter = role ? { name: role } : undefined;
+
+
+    const offset = (page - 1) * pageSize;
+
+    const { count: totalItems, rows } = await Offers.findAndCountAll({
       where: whereOffer,
       include: [
         {
           model: StudentRoles,
           as: 'student_roles',
           through: { attributes: [] },
-          required: !!roleFilter,
-          where: roleFilter
+          required: Boolean(roleFilter),
+          ...(roleFilter && { where: roleFilter })
         },
         {
           model: Establishments,
-          attributes: ['establishment_name'], 
-          required: false
+          attributes: ['establishment_name']
         }
-      ]
-    })
+      ],
+      order: [['id', 'DESC']],
+      limit: pageSize,
+      offset
+    });
 
-    const enriched = await Promise.all(
-      offers.map(async inst => {
-        const offer = inst.get({ plain: true })
+    const data = await Promise.all(
+      rows.map(async inst => {
+        const offer = inst.get({ plain: true });
         if (offer.offer_image) {
-          offer.offer_image = await generateSignedUrl(offer.offer_image, 7200)
+          offer.offer_image = await generateSignedUrl(offer.offer_image, 7200);
         }
-        return offer
+        return offer;
       })
-    )
+    );
 
-    return enriched
+    const totalPages = Math.ceil(totalItems / pageSize);
+
+    return {
+      data,
+      pagination: { page, pageSize, totalItems, totalPages }
+    };
   }
 
 

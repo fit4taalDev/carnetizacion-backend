@@ -152,8 +152,13 @@ class OfferController{
     async findAllOffersByEstablishmentId (req, res, next) {
         const establishment_id = req.params.id
         const role = req.query.role?.toString().trim()
+
+        const page     = req.query.page     ? Math.max(1, parseInt(req.query.pageOffer, 10))     : 1;
+        const pageSize = req.query.pageSize ? Math.max(1, parseInt(req.query.pageSizeOffer, 10)) : 10;
+        const status = req.query.status?.toString().trim()
+
         try{
-            const offers = await service.findAllByEstablishmentID(establishment_id, role)
+            const offers = await service.findAllByEstablishmentID(establishment_id, role, page, pageSize, status)
             return res.status(200).json(offers)
 
         }catch (error) {

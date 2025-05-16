@@ -39,40 +39,45 @@ class StudentController{
         }
       }
 
-    async findAllStudents (req, res, next){
-      const role     = req.query.role     ? req.query.role.toString().trim()     : undefined;
-      const fullname = req.query.fullname ? req.query.fullname.toString().trim() : undefined;
-  
-      const activeRaw = req.query.active;
-      let active;
-      if (activeRaw === 'true' || activeRaw === 'false') {
-        active = activeRaw;
-      }
-  
-      const programRaw = req.query.program_id ?? req.query.program;
-      let program;
-      if (programRaw !== undefined && programRaw !== '') {
-        program = parseInt(programRaw.toString(), 10);
-        if (isNaN(program)) {
-          return res.status(400).json({ message: 'program_id debe ser un entero válido' });
-        }
-      }
-  
-      const dateFrom = req.query.dateFrom || req.query.date_from;
-      const dateTo   = req.query.dateTo   || req.query.date_to;
+      async findAllStudents(req, res, next) {
+        const role     = req.query.role     ? req.query.role.toString().trim()     : undefined;
+        const fullname = req.query.fullname ? req.query.fullname.toString().trim() : undefined;
 
-        try{
-            const students = await service.findAllStudents(role,fullname, active, program, dateFrom, dateTo)
-            return res.status(200).json(students)
-        }catch (error) {
-            next(error);
+        const activeRaw = req.query.active;
+        let active;
+        if (activeRaw === 'true' || activeRaw === 'false') {
+          active = activeRaw;
         }
-    }
+
+        const programRaw = req.query.program_id ?? req.query.program;
+        let program;
+        if (programRaw !== undefined && programRaw !== '') {
+          program = parseInt(programRaw.toString(), 10);
+          if (isNaN(program)) {
+            return res.status(400).json({ message: 'program_id debe ser un entero válido' });
+          }
+        }
+
+        const dateFrom = req.query.dateFrom || req.query.date_from;
+        const dateTo   = req.query.dateTo   || req.query.date_to;
+
+        const page     = req.query.page     ? Math.max(1, parseInt(req.query.page, 10))     : 1;
+        const pageSize = req.query.pageSize ? Math.max(1, parseInt(req.query.pageSize, 10)) : 10;
+
+        try {
+          const result = await service.findAllStudents(role, fullname, active, program, dateFrom, dateTo, page, pageSize);
+          return res.status(200).json(result);
+        } catch (error) {
+          next(error);
+        }
+      }
 
     async findAllStudentById (req, res, next){
         const {id} = req.params
+        const page     = req.query.page     ? Math.max(1, parseInt(req.query.page, 10))     : 1;
+        const pageSize = req.query.pageSize ? Math.max(1, parseInt(req.query.pageSize, 10)) : 10;
         try{
-            const students = await service.findById(id)
+            const students = await service.findById(id, page, pageSize)
             return res.status(200).json(students)
         }catch (error) {
             next(error);

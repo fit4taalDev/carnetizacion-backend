@@ -57,6 +57,9 @@ class EstablishmentController{
             const dateFrom = req.query.dateFrom || req.query.date_from;
             const dateTo   = req.query.dateTo   || req.query.date_to;
 
+            const page     = req.query.page     ? Math.max(1, parseInt(req.query.page, 10))     : 1;
+            const pageSize = req.query.pageSize ? Math.max(1, parseInt(req.query.pageSize, 10)) : 10;
+
             const establishmentRaw = req.query.establishment_id ?? req.query.establishment;
 
             let establishment;
@@ -67,7 +70,7 @@ class EstablishmentController{
               }
             }
 
-            const establishments = await service.findAllEstablishments(role, establishment_name, status, dateFrom, dateTo, establishment)
+            const establishments = await service.findAllEstablishments(role, establishment_name, status, dateFrom, dateTo, establishment, page, pageSize)
             return res.status(200).json(establishments)
         }catch (error) {
             next(error);
@@ -76,8 +79,10 @@ class EstablishmentController{
 
     async findEstablishmentById (req, res, next){
         const {id} = req.params
+        const page     = req.query.page     ? Math.max(1, parseInt(req.query.page, 10))     : 1;
+        const pageSize = req.query.pageSize ? Math.max(1, parseInt(req.query.pageSize, 10)) : 10;
         try{
-            const establishment = await service.findById(id)
+            const establishment = await service.findById(id, page, pageSize)
             return res.status(200).json(establishment)
         }catch (error) {
             next(error);
