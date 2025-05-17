@@ -149,58 +149,50 @@ async findAllOfferRedemptionByStudentIdEstablihsment(student_id, establishment_i
 
     
 async findAllOffersRedemptionsByStudent(student_id, page = 1, pageSize = 10) {
-    const offset = (page - 1) * pageSize
+  const offset = (page - 1) * pageSize;
+  const { count: totalOfferRedemptions, rows } = await this.model.findAndCountAll({
+    where: { student_id },
+    distinct: true,
+    limit: pageSize,
+    offset,
+    order: [['createdAt', 'DESC']],
+    include: [{
+      model: Offers,
+      as: 'offer',
+      attributes: ['title','normal_price','discount_price','establishment_id'],
+      include: [{
+        model: Establishments,
+        as: 'establishment',
+        attributes: ['establishment_name']
+      }]
+    }]
+  });
 
-    const { count: totalOfferRedemptions, rows } = await this.model.findAndCountAll({
-      where: { student_id },
-      limit:  pageSize,
-      offset,
-      order: [['createdAt', 'DESC']],
-      include: [
-        {
-          model: Offers,
-          attributes: [
-            'title',
-            'normal_price',
-            'discount_price',
-            'establishment_id'
-          ],
-          include: [
-            {
-              model: Establishments,
-              attributes: ['establishment_name']
-            }
-          ]
-        }
-      ]
-    })
+  const [{ total_saved }] = await sequelize.query(
+    `SELECT COALESCE(SUM(o.normal_price - o.discount_price),0) AS total_saved
+     FROM offer_redemptions r
+     JOIN offers o ON o.id = r.offer_id
+     WHERE r.student_id = :student_id`,
+    { replacements: { student_id }, type: QueryTypes.SELECT }
+  );
+  const totalSaved = parseFloat(total_saved);
 
-    const [ sumRow ] = await sequelize.query(
-      `
-      SELECT
-        COALESCE(SUM(o.normal_price - o.discount_price), 0) AS total_saved
-      FROM offer_redemptions r
-      JOIN offers o ON o.id = r.offer_id
-      WHERE r.student_id = :student_id
-      `,
-      {
-        replacements: { student_id },
-        type: QueryTypes.SELECT
-      }
-    )
-    const totalSaved = parseFloat(sumRow.total_saved)
+  const data = rows.map(r => r.get({ plain: true }));
+  const totalPages = Math.ceil(totalOfferRedemptions / pageSize);
 
-    const data = rows.map(r => ({
-      title:            r.offer.title,
-      normal_price:     r.offer.normal_price,
-      discount_price:   r.offer.discount_price,
-      establishment_id: r.offer.establishment_id,
-      establishment_name: r.offer.establishment?.establishment_name ?? null,
-      redeemedAt:       r.createdAt
-    }))
+  return {
+    totalOfferRedemptions,
+    totalSaved,
+    data,
+    pagination: {
+      page,
+      pageSize,
+      totalItems: totalOfferRedemptions,
+      totalPages
+    }
+  };
+}
 
-    return { totalOfferRedemptions, totalSaved, page, pageSize, data }
-  }
 
 }
 

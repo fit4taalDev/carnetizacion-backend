@@ -55,13 +55,13 @@ class OfferRedemptionController{
     async findByStudent(req, res, next){
         try {
             const student_id = req.user.id
-            const page = parseInt(req.query.page) || 1
-            const size = parseInt(req.query.size) || 10
+            const page     = req.query.page     ? Math.max(1, parseInt(req.query.page, 10))     : 1;
+            const pageSize = req.query.pageSize ? Math.max(1, parseInt(req.query.pageSize, 10)) : 10;
 
             const result = await service.findAllOffersRedemptionsByStudent(
                 student_id,
                 page,
-                size
+                pageSize
             )
             return res.status(200).json(result)
         }catch (error) {
