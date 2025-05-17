@@ -71,139 +71,86 @@ async createOfferRedemption({ student_id, offer_id }) {
     return super.create({ student_id, offer_id })
   }
 
-    async findAllOffersByEstablishment(establishment_id, search, role, redemptionDate, dateFrom, dateTo){
-    const whereRedemptions = {};
-    const offerWhere  = { establishment_id };
-
-    if (search) {
+  async findAllOffersByEstablishment(establishment_id, search, role, redemptionDate, dateFrom, dateTo, page = 1, pageSize = 10) {
+      const offset = (page - 1) * pageSize;
+      const whereRedemptions = {};
+      const offerWhere = { establishment_id };
+      if (search) {
         const num = Number(search);
-        if (!isNaN(num)) {
-        whereRedemptions.offer_id = num;
-        } else {
-        offerWhere.title = { [Op.iLike]: `%${search}%` };
+        if (!isNaN(num)) whereRedemptions.offer_id = num;
+        else offerWhere.title = { [Op.iLike]: `%${search}%` };
+      }
+      let studentRoleId;
+      if (role === 'Standard') studentRoleId = 0;
+      else if (role === 'Premium') studentRoleId = 1;
+      let order = [];
+      if (redemptionDate === 'soon') order = [['createdAt','DESC']];
+      else if (redemptionDate === 'far') order = [['createdAt','ASC']];
+      if (dateFrom || dateTo) {
+        whereRedemptions.createdAt = {};
+        if (dateFrom) whereRedemptions.createdAt[Op.gte] = new Date(dateFrom);
+        if (dateTo) {
+          const end = new Date(dateTo);
+          end.setHours(23,59,59,999);
+          whereRedemptions.createdAt[Op.lte] = end;
         }
-    }
-
-
-    let studentRoleId;
-    if (role === 'Standard') studentRoleId = 0;
-    else if (role === 'Premium') studentRoleId = 1;
-
-    let order = [];
-
-    if (redemptionDate === 'soon') {
-    order = [['createdAt', 'DESC']];
-    } else if (redemptionDate === 'far') {
-    order = [['createdAt', 'ASC']];
-    }
-
-    if (dateFrom || dateTo) {
-    whereRedemptions.createdAt = {};
-    if (dateFrom) {
-      whereRedemptions.createdAt[Op.gte] = new Date(dateFrom);
-    }
-    if (dateTo) {
-      const end = new Date(dateTo);
-      end.setHours(23, 59, 59, 999);
-      whereRedemptions.createdAt[Op.lte] = end;
-    }
-  }
-
-    const offersRedemptions = await OfferRedemptions.findAll({
+      }
+      const { count: totalItems, rows } = await OfferRedemptions.findAndCountAll({
         where: whereRedemptions,
         include: [
-            {
-                model: Students,
-                attributes: ['student_id', 'student_role_id','id'],
-                ...(studentRoleId !== undefined
-                ? { where: { student_role_id: studentRoleId }, required: true }
-                : {})
-            },
-            {
-                model: Offers,
-                where: offerWhere,
-                attributes: ['title']
-            }
+          { model: Students, attributes: ['student_id','student_role_id','id'], ...(studentRoleId !== undefined ? { where: { student_role_id: studentRoleId }, required: true } : {}) },
+          { model: Offers, where: offerWhere, attributes: ['title'] }
         ],
-        order
-    });
-
-    return offersRedemptions
+        order,
+        limit: pageSize,
+        offset
+      });
+      const data = rows.map(r => r.get({ plain: true }));
+      return { data, pagination: { page, pageSize, totalPages: Math.ceil(totalItems / pageSize), totalItems } };
     }
 
-    async findAllOfferRedemptionByStudentIdEstablihsment(student_id, establishment_id, page = 1 , pageSize = 10){
-    const offset = (page - 1) * pageSize;
+async findAllOfferRedemptionByStudentIdEstablihsment(student_id, establishment_id, page = 1, pageSize = 10) {
+  const offset = (page - 1) * pageSize;
+  const { count: totalCouponsUsed, rows } = await OfferRedemptions.findAndCountAll({
+    where: { student_id },
+    include: [
+      { model: Students, as: 'student', attributes: ['student_id','student_role_id','id'] },
+      { model: Offers, as: 'offer', where: { establishment_id }, attributes: ['id','title','end_date','normal_price','discount_price'] }
+    ],
+    order: [['createdAt','DESC']],
+    limit: pageSize,
+    offset,
+    distinct: true
+  });
+  const redemptions = rows.map(r => r.get({ plain: true }));
+  const studentIdModel = redemptions.length ? redemptions[0].student.student_id : null;
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const couponsThisMonth = await OfferRedemptions.count({
+    where: { student_id, createdAt: { [Op.gte]: startOfMonth } },
+    include: [{ model: Offers, as: 'offer', where: { establishment_id }, attributes: [] }],
+    distinct: true
+  });
+  const redeemedIds = rows.map(r => r.offer_id);
+  const soonLimit = new Date(now); soonLimit.setDate(now.getDate()+7); soonLimit.setHours(23,59,59,999);
+  const discountsAboutToExpire = await Offers.count({
+    where: { establishment_id, end_date: { [Op.between]: [now, soonLimit] }, ...(redeemedIds.length && { id: { [Op.notIn]: redeemedIds } }) }
+  });
+  const totalPages = Math.ceil(totalCouponsUsed / pageSize);
+  return {
+    student_id: studentIdModel,
+    redemptions,
+    totalCouponsUsed,
+    couponsThisMonth,
+    discountsAboutToExpire,
+    pagination: { page, pageSize, totalPages, totalItems: totalCouponsUsed }
+  };
+}
 
-    const { count: totalCouponsUsed, rows: redemptions } =
-        await OfferRedemptions.findAndCountAll({
-        where: { student_id },
-        include: [
-            {
-            model: Offers,
-            where: { establishment_id },
-            attributes: ['id', 'title', 'end_date','normal_price','discount_price']
-            },
-            {
-            model: Students,
-            attributes: ['student_id', 'student_role_id','id']
-            }
-        ],
-        order: [['createdAt', 'DESC']],
-        limit:  pageSize,
-        offset,
-        distinct: true
-        });
-
-    const now          = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-    const couponsThisMonth = await OfferRedemptions.count({
-        where: {
-        student_id,
-        createdAt: { [Op.gte]: startOfMonth }
-        },
-        include: [
-        {
-            model: Offers,
-            where: { establishment_id },
-            attributes: []
-        }
-        ],
-        distinct: true
-    });
-
-    const redeemedIds = redemptions.map(r => r.offer_id);
-    const soonLimit = new Date(now);
-    soonLimit.setDate(now.getDate() + 7);
-    soonLimit.setHours(23, 59, 59, 999);
-
-    const discountsAboutToExpire = await Offers.count({
-        where: {
-        establishment_id,
-        end_date: { [Op.between]: [now, soonLimit] },
-        ...(redeemedIds.length && { id: { [Op.notIn]: redeemedIds } })
-        }
-    });
-
-    const totalPages = Math.ceil(totalCouponsUsed / pageSize);
-
-    return {
-        redemptions,             
-        totalCouponsUsed,         
-        couponsThisMonth,         
-        discountsAboutToExpire,   
-        pagination: {
-        page,
-        pageSize,
-        totalPages,
-        totalItems: totalCouponsUsed
-        }
-    };
-    }
     
 async findAllOffersRedemptionsByStudent(student_id, page = 1, pageSize = 10) {
     const offset = (page - 1) * pageSize
 
-    // 1) Paginación + conteo total
     const { count: totalOfferRedemptions, rows } = await this.model.findAndCountAll({
       where: { student_id },
       limit:  pageSize,
@@ -228,7 +175,6 @@ async findAllOffersRedemptionsByStudent(student_id, page = 1, pageSize = 10) {
       ]
     })
 
-    // 2) Sumar todo lo ahorrado en TODAS las redenciones de este estudiante
     const [ sumRow ] = await sequelize.query(
       `
       SELECT
@@ -244,7 +190,6 @@ async findAllOffersRedemptionsByStudent(student_id, page = 1, pageSize = 10) {
     )
     const totalSaved = parseFloat(sumRow.total_saved)
 
-    // 3) Empaquetar la data que devuelves al controller
     const data = rows.map(r => ({
       title:            r.offer.title,
       normal_price:     r.offer.normal_price,

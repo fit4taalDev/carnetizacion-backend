@@ -128,6 +128,8 @@ class OfferController{
           const role = req.query.role?.toString().trim()
           const activeParam = req.query.active?.toString().trim();
           const expirationDate = req.query.expirationDate?.toString().trim();
+          const page     = req.query.page     ? Math.max(1, parseInt(req.query.page, 10))     : 1;
+          const pageSize = req.query.pageSize ? Math.max(1, parseInt(req.query.pageSize, 10)) : 10;
 
           let active;
           if (activeParam === 'true')  active = true;
@@ -142,7 +144,7 @@ class OfferController{
           else if (validityParam === 'false') validity = false;
 
 
-          const offers = await service.findAllByEstablishment(establishmentId, role, search, active, dateFrom, dateTo, validity,expirationDate)
+          const offers = await service.findAllByEstablishment(establishmentId, role, search, active, dateFrom, dateTo, validity,expirationDate, page, pageSize)
           return res.status(200).json(offers)
         } catch (err) {
           next(err)

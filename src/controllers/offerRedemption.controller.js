@@ -28,8 +28,10 @@ class OfferRedemptionController{
             const redemptionDate = req.query.redemptionDate?.toString().trim();
             const dateFrom = req.query.dateFrom || req.query.date_from;
             const dateTo = req.query.dateTo   || req.query.date_to;
+            const page     = req.query.page     ? Math.max(1, parseInt(req.query.page, 10))     : 1;
+            const pageSize = req.query.pageSize ? Math.max(1, parseInt(req.query.pageSize, 10)) : 10;
 
-            const offersRemptions = await service.findAllOffersByEstablishment(establishmentId,search, role, redemptionDate, dateFrom, dateTo);
+            const offersRemptions = await service.findAllOffersByEstablishment(establishmentId,search, role, redemptionDate, dateFrom, dateTo, page, pageSize);
             return res.status(200).json(offersRemptions)
         }catch (error) {
             next(error);
@@ -40,8 +42,8 @@ class OfferRedemptionController{
         try{
             const establishmentId = req.user.id 
             const student_id = req.params.id
-            const page = req.query.page
-            const pageSize = req.query.pageSize
+            const page     = req.query.page     ? Math.max(1, parseInt(req.query.page, 10))     : 1;
+            const pageSize = req.query.pageSize ? Math.max(1, parseInt(req.query.pageSize, 10)) : 10;
         
             const offerRedemptionByStudentIdEstablishment = await service.findAllOfferRedemptionByStudentIdEstablihsment(student_id, establishmentId, page, pageSize)
             return res.status(200).json(offerRedemptionByStudentIdEstablishment)

@@ -259,6 +259,57 @@ async findById(id, page = 1, pageSize = 10) {
     return establishment;
   }
 
+   async findAllEstablishmentStudent(search,category) {
+   const where = { establishment_status_id: 0 }
+
+    if (search) {
+      where.establishment_name = { [Op.iLike]: `%${search}%` }
+    }
+
+    if (category !== '') {
+      const catId = parseInt(category, 10)
+      if (!Number.isNaN(catId)) {
+        where.establishment_category_id = catId
+      }
+    }
+    const establishments = await this.model.findAll({
+      where,
+      attributes: [
+        'id',
+        'establishment_name',
+        'establishment_address',
+        'description',
+        'profile_photo',
+        'establishment_category_id',
+        [
+          sequelize.literal(`(
+            SELECT COUNT(*)
+            FROM offers
+            WHERE offers.establishment_id = establishments.id
+          )`),
+          'offersCount'
+        ]
+      ]
+    })
+
+    const enriched = await Promise.all(
+      establishments.map(async inst => {
+        const e = inst.get({ plain: true })
+        e.offersCount = parseInt(e.offersCount, 10)
+
+        if (e.qr_img) {
+          e.qr_img = await generateSignedUrl(e.qr_img, 7200)
+        }
+        if (e.profile_photo) {
+          e.profile_photo = await generateSignedUrl(e.profile_photo, 7200)
+        }
+        return e
+      })
+    )
+
+    return enriched
+  }
+
  async findByIdStudent(establishment_id, student_id) {
     const inst = await this.model.findOne({
       where: { id: establishment_id },

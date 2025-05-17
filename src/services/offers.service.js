@@ -111,84 +111,48 @@ class OffersService extends BaseService {
     return enriched
   }
 
-async findAllByEstablishment(establishmentId, role, search, active, dateFrom, dateTo, validity, expirationDate) {
+async findAllByEstablishment(establishmentId, role, search, active, dateFrom, dateTo, validity, expirationDate, page = 1, pageSize = 10) {
+  const offset = (page - 1) * pageSize
   const whereOffer = {
     establishment_id: establishmentId,
     ...(active !== undefined && { active }),
-    ...(search && {
-      [Op.or]: [
-        { title: { [Op.iLike]: `%${search}%` } },
-        { id: !isNaN(Number(search)) ? Number(search) : -1 }
-      ],
-    }),
-  };
-
-  const roleFilter = role ? { name: role } : undefined;
-
+    ...(search && { [Op.or]: [{ title: { [Op.iLike]: `%${search}%` } }, { id: !isNaN(Number(search)) ? Number(search) : -1 }] })
+  }
   if (dateFrom || dateTo) {
-    whereOffer.end_date = {};
-    if (dateFrom) {
-      whereOffer.end_date[Op.gte] = new Date(dateFrom);
-    }
-    if (dateTo) {
-      const end = new Date(dateTo);
-      end.setHours(23, 59, 59, 999);
-      whereOffer.end_date[Op.lte] = end;
-    }
+    whereOffer.end_date = {}
+    if (dateFrom) whereOffer.end_date[Op.gte] = new Date(dateFrom)
+    if (dateTo) { const end = new Date(dateTo); end.setHours(23, 59, 59, 999); whereOffer.end_date[Op.lte] = end }
   }
-
-  if (validity === true) {
-    whereOffer[Op.and] = [
-      ...(whereOffer[Op.and] || []),
-      { end_date: { [Op.gte]: new Date() } }
-    ];
-  } else if (validity === false) {
-    whereOffer[Op.and] = [
-      ...(whereOffer[Op.and] || []),
-      { end_date: { [Op.lt]: new Date() } }
-    ];
-  }
-
-  let order = [];
-  if (expirationDate === 'soon') {
-    order = [['end_date', 'ASC']];
-  } else if (expirationDate === 'far') {
-    order = [['end_date', 'DESC']];
-  }
-
-  const offers = await this.model.findAll({
+  if (validity === true) whereOffer[Op.and] = [...(whereOffer[Op.and] || []), { end_date: { [Op.gte]: new Date() } }]
+  else if (validity === false) whereOffer[Op.and] = [...(whereOffer[Op.and] || []), { end_date: { [Op.lt]: new Date() } }]
+  let order = []
+  if (expirationDate === 'soon') order = [['end_date', 'ASC']]
+  else if (expirationDate === 'far') order = [['end_date', 'DESC']]
+  const { count: totalItems, rows: offers } = await this.model.findAndCountAll({
     where: whereOffer,
-    include: [
-      {
-        model: StudentRoles,
-        as: 'student_roles',
-        through: { attributes: [] },
-        required: !!roleFilter,
-        where: roleFilter
-      }
-    ],
-    order
-  });
-
-  const now = new Date();
-  for (const offer of offers) {
-    if (offer.end_date < now && offer.active) {
-      offer.active = false;
-      await offer.save();
+    include: [{ model: StudentRoles, as: 'student_roles', through: { attributes: [] }, required: !!role, where: role ? { name: role } : undefined }],
+    distinct: true,
+    order,
+    limit: pageSize,
+    offset
+  })
+  const now = new Date()
+  const data = await Promise.all(offers.map(async inst => {
+    if (inst.end_date < now && inst.active) { inst.active = false; await inst.save() }
+    const o = inst.get({ plain: true })
+    if (o.offer_image) o.offer_image = await generateSignedUrl(o.offer_image, 7200)
+    return o
+  }))
+  return {
+    data,
+    pagination: {
+      page,
+      pageSize,
+      totalPages: Math.ceil(totalItems / pageSize),
+      totalItems
     }
   }
-
-  return Promise.all(
-    offers.map(async inst => {
-      const offer = inst.get({ plain: true });
-      if (offer.offer_image) {
-        offer.offer_image = await generateSignedUrl(offer.offer_image, 7200);
-      }
-      return offer;
-    })
-  );
 }
-
 
 async findAllByEstablishmentID(establishmentId, role, page = 1, pageSize = 10, status = 'all') {
 
