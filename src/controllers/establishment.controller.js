@@ -93,8 +93,9 @@ class EstablishmentController{
       try{
         const search = req.query.search?.toString().trim() ?? ''
         const category = req.query.category?.toString().trim() ?? ''
+        const studentId = req.user.id 
 
-        const establishments = await service.findAllEstablishmentStudent(search, category)
+        const establishments = await service.findAllEstablishmentStudent(search, category, studentId)
         return res.status(200).json(establishments)
       }catch (error) {
             next(error);

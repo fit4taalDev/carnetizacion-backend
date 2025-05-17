@@ -174,105 +174,105 @@ class EstablishmentService extends BaseService{
         };
       }
 
-async findById(id, page = 1, pageSize = 10) {
-    const now = new Date();
-    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    async findById(id, page = 1, pageSize = 10) {
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const inst = await this.model.findOne({
-      where: { id },
-      include: [
-        { model: EstablishmentRoles, attributes: ['name'] },
-        { model: Users, attributes: ['email'] }
-      ],
-      attributes: {
-        exclude: ['user_id', 'establishment_role_id']
+        const inst = await this.model.findOne({
+          where: { id },
+          include: [
+            { model: EstablishmentRoles, attributes: ['name'] },
+            { model: Users, attributes: ['email'] }
+          ],
+          attributes: {
+            exclude: ['user_id', 'establishment_role_id']
+          }
+        });
+        if (!inst) return null;
+        const establishment = inst.get({ plain: true });
+
+        if (establishment.qr_img)        establishment.qr_img        = await generateSignedUrl(establishment.qr_img,        7200);
+        if (establishment.profile_photo) establishment.profile_photo = await generateSignedUrl(establishment.profile_photo, 7200);
+
+        // Total de cupones activos (ofertas vigentes y activas)
+        const totalActiveCoupons = await Offers.count({
+          where: {
+            establishment_id: id,
+            active: true,
+            end_date: { [Op.gte]: now }
+          }
+        });
+
+        // Cupones redimidos este mes
+        const redeemedThisMonth = await OfferRedemptions.count({
+          include: [{ model: Offers, where: { establishment_id: id } }],
+          where: {
+            createdAt: { [Op.between]: [startOfMonth, endOfMonth] }
+          }
+        });
+
+        // ID del descuento más usado (offer_id con más redenciones)
+        const mostUsed = await OfferRedemptions.findAll({
+          include: [{ model: Offers, where: { establishment_id: id }, attributes: [] }],
+          attributes: [
+            'offer_id',
+            [sequelize.fn('COUNT', sequelize.col('offer_id')), 'use_count']
+          ],
+          group: ['offer_id'],
+          order: [[sequelize.literal('"use_count"'), 'DESC']],
+          limit: 1
+        });
+        const mostUsedDiscountId = mostUsed.length ? mostUsed[0].get('offer_id') : null;
+
+        const offset = (page - 1) * pageSize;
+        const { count: totalItems, rows } = await OfferRedemptions.findAndCountAll({
+          where: {},
+          include: [{ model: Offers, where: { establishment_id: id }, attributes: ['id', 'title', 'end_date', 'discount_price', 'offer_image', 'normal_price']},
+          {
+              model: Students,
+              attributes: ['fullname', 'student_id']
+            }],
+          order: [['createdAt', 'DESC']],
+          limit: pageSize,
+          offset
+        });
+
+        const paginated = await Promise.all(
+          rows.map(async r => {
+            const redemption = r.get({ plain: true });
+            if (redemption.Offer && redemption.Offer.offer_image) {
+              redemption.Offer.offer_image = await generateSignedUrl(redemption.Offer.offer_image, 7200);
+            }
+            return redemption;
+          })
+        );
+
+        const totalPages = Math.ceil(totalItems / pageSize);
+
+        establishment.totalActiveCoupons = totalActiveCoupons;
+        establishment.redeemedThisMonth = redeemedThisMonth;
+        establishment.mostUsedDiscountId = mostUsedDiscountId;
+        establishment.offerRedemptions = paginated;
+        establishment.pagination = { page, pageSize, totalItems, totalPages };
+
+        return establishment;
       }
-    });
-    if (!inst) return null;
-    const establishment = inst.get({ plain: true });
 
-    if (establishment.qr_img)        establishment.qr_img        = await generateSignedUrl(establishment.qr_img,        7200);
-    if (establishment.profile_photo) establishment.profile_photo = await generateSignedUrl(establishment.profile_photo, 7200);
-
-    // Total de cupones activos (ofertas vigentes y activas)
-    const totalActiveCoupons = await Offers.count({
-      where: {
-        establishment_id: id,
-        active: true,
-        end_date: { [Op.gte]: now }
-      }
-    });
-
-    // Cupones redimidos este mes
-    const redeemedThisMonth = await OfferRedemptions.count({
-      include: [{ model: Offers, where: { establishment_id: id } }],
-      where: {
-        createdAt: { [Op.between]: [startOfMonth, endOfMonth] }
-      }
-    });
-
-    // ID del descuento más usado (offer_id con más redenciones)
-    const mostUsed = await OfferRedemptions.findAll({
-      include: [{ model: Offers, where: { establishment_id: id }, attributes: [] }],
-      attributes: [
-        'offer_id',
-        [sequelize.fn('COUNT', sequelize.col('offer_id')), 'use_count']
-      ],
-      group: ['offer_id'],
-      order: [[sequelize.literal('"use_count"'), 'DESC']],
-      limit: 1
-    });
-    const mostUsedDiscountId = mostUsed.length ? mostUsed[0].get('offer_id') : null;
-
-    const offset = (page - 1) * pageSize;
-    const { count: totalItems, rows } = await OfferRedemptions.findAndCountAll({
-      where: {},
-      include: [{ model: Offers, where: { establishment_id: id }, attributes: ['id', 'title', 'end_date', 'discount_price', 'offer_image', 'normal_price']},
-      {
-          model: Students,
-          attributes: ['fullname', 'student_id']
-        }],
-      order: [['createdAt', 'DESC']],
-      limit: pageSize,
-      offset
-    });
-
-    const paginated = await Promise.all(
-      rows.map(async r => {
-        const redemption = r.get({ plain: true });
-        if (redemption.Offer && redemption.Offer.offer_image) {
-          redemption.Offer.offer_image = await generateSignedUrl(redemption.Offer.offer_image, 7200);
-        }
-        return redemption;
-      })
-    );
-
-    const totalPages = Math.ceil(totalItems / pageSize);
-
-    establishment.totalActiveCoupons = totalActiveCoupons;
-    establishment.redeemedThisMonth = redeemedThisMonth;
-    establishment.mostUsedDiscountId = mostUsedDiscountId;
-    establishment.offerRedemptions = paginated;
-    establishment.pagination = { page, pageSize, totalItems, totalPages };
-
-    return establishment;
-  }
-
-   async findAllEstablishmentStudent(search,category) {
-   const where = { establishment_status_id: 0 }
+   async findAllEstablishmentStudent(search = '', category = '', studentId) {
+    const where = { establishment_status_id: 0 }
 
     if (search) {
       where.establishment_name = { [Op.iLike]: `%${search}%` }
     }
-
-    if (category !== '') {
-      const catId = parseInt(category, 10)
+    if (category) {
+      const catId = Number(category)
       if (!Number.isNaN(catId)) {
         where.establishment_category_id = catId
       }
     }
-    const establishments = await this.model.findAll({
+
+    const establishments = await Establishments.findAll({
       where,
       attributes: [
         'id',
@@ -284,19 +284,22 @@ async findById(id, page = 1, pageSize = 10) {
         [
           sequelize.literal(`(
             SELECT COUNT(*)
-            FROM offers
-            WHERE offers.establishment_id = establishments.id
+              FROM offers AS o
+         LEFT JOIN offer_redemptions AS r
+                ON r.offer_id = o.id
+               AND r.student_id = '${studentId}'
+             WHERE o.establishment_id = establishments.id
+               AND r.id IS NULL
           )`),
           'offersCount'
         ]
       ]
     })
 
-    const enriched = await Promise.all(
+    return Promise.all(
       establishments.map(async inst => {
         const e = inst.get({ plain: true })
         e.offersCount = parseInt(e.offersCount, 10)
-
         if (e.qr_img) {
           e.qr_img = await generateSignedUrl(e.qr_img, 7200)
         }
@@ -306,8 +309,6 @@ async findById(id, page = 1, pageSize = 10) {
         return e
       })
     )
-
-    return enriched
   }
 
  async findByIdStudent(establishment_id, student_id) {
