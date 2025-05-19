@@ -1,6 +1,7 @@
 import Joi from "joi";
 
 export const PasswordSchema = Joi.object({
+  currentPassword: Joi.string().required(),
   password: Joi.string()
     .min(8)
     .pattern(/^(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/)
