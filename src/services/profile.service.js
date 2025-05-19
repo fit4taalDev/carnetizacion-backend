@@ -94,4 +94,55 @@ export default class ProfileService extends BaseService {
 
     return this.findProfile(id)
   }
+
+  async updateEstablishmentProfile(id, data, fileBuffer, fileMeta) {
+    if (fileBuffer && fileMeta) {
+      const imageKey = await uploadImage(
+        fileBuffer,
+        fileMeta,
+        id.toString(),
+        'establishment'
+      );
+      data.profile_photo = imageKey;
+    }
+
+    const { email, ...estData } = data;
+
+    if (email) {
+      await super.update(id, { email });
+    }
+
+    await Establishments.update(
+      estData,
+      { where: { user_id: id } }
+    );
+
+    return this.findProfile(id);
+  }
+
+  async updateStudentProfile(id, data, fileBuffer, fileMeta) {
+    if (fileBuffer && fileMeta) {
+      const imageKey = await uploadImage(
+        fileBuffer,
+        fileMeta,
+        id.toString(),
+        'student'
+      )
+      data.profile_photo = imageKey
+    }
+
+    const { email, ...studentData } = data
+
+    if (email) {
+      await super.update(id, { email })
+    }
+
+    await Students.update(
+      studentData,
+      { where: { user_id: id } }
+    )
+
+    return this.findProfile(id)
+  }
+  
 }
