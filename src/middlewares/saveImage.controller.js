@@ -6,7 +6,7 @@ const fileFilter = (req, file, cb) => {
     'image/jpeg',
     'image/png',
     'image/jpg',
-    'image/webp'    // ahora también permitimos WebP
+    'image/webp'  
   ];
   if (!allowed.includes(file.mimetype)) {
     return cb(new multer.MulterError(
