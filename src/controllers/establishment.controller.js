@@ -94,8 +94,10 @@ class EstablishmentController{
         const search = req.query.search?.toString().trim() ?? ''
         const category = req.query.category?.toString().trim() ?? ''
         const studentId = req.user.id 
+        const page     = req.query.page     ? Math.max(1, parseInt(req.query.page, 10))     : 1;
+        const pageSize = req.query.pageSize ? Math.max(1, parseInt(req.query.pageSize, 10)) : 10;
 
-        const establishments = await service.findAllEstablishmentStudent(search, category, studentId)
+        const establishments = await service.findAllEstablishmentStudent(search, category, studentId, page, pageSize)
         return res.status(200).json(establishments)
       }catch (error) {
             next(error);
@@ -106,10 +108,10 @@ class EstablishmentController{
       try{
         const establishment_id = req.params.id
         const student_id = req.user.id
-        const establishment = await service.findByIdStudent(
-        establishment_id,
-        student_id
-      )
+        const page     = req.query.page     ? Math.max(1, parseInt(req.query.page, 10))     : 1;
+        const pageSize = req.query.pageSize ? Math.max(1, parseInt(req.query.pageSize, 10)) : 10;
+
+        const establishment = await service.findByIdStudent(establishment_id,student_id, page, pageSize)
         return res.status(200).json(establishment)
       } catch (error) {
           next(error);

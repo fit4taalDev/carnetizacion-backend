@@ -259,7 +259,13 @@ class EstablishmentService extends BaseService{
         return establishment;
       }
 
-   async findAllEstablishmentStudent(search = '', category = '', studentId) {
+ async findAllEstablishmentStudent(
+    search = '',
+    category = '',
+    studentId,
+    page = 1,
+    pageSize = 10
+  ) {
     const where = { establishment_status_id: 0 }
 
     if (search) {
@@ -272,8 +278,13 @@ class EstablishmentService extends BaseService{
       }
     }
 
-    const establishments = await Establishments.findAll({
+    const offset = (page - 1) * pageSize
+
+    const { count: totalItems, rows } = await Establishments.findAndCountAll({
       where,
+      limit:  pageSize,
+      offset,
+      order: [['id', 'DESC']],
       attributes: [
         'id',
         'establishment_name',
@@ -296,8 +307,8 @@ class EstablishmentService extends BaseService{
       ]
     })
 
-    return Promise.all(
-      establishments.map(async inst => {
+    const establishments = await Promise.all(
+      rows.map(async inst => {
         const e = inst.get({ plain: true })
         e.offersCount = parseInt(e.offersCount, 10)
         if (e.qr_img) {
@@ -309,11 +320,23 @@ class EstablishmentService extends BaseService{
         return e
       })
     )
+
+    const totalPages = Math.ceil(totalItems / pageSize)
+
+    return {
+      establishments,
+      pagination: {
+        page,
+        pageSize,
+        totalPages,
+        totalItems
+      }
+    }
   }
 
- async findByIdStudent(establishment_id, student_id) {
-    const inst = await this.model.findOne({
-      where: { id: establishment_id },
+async findByIdStudent(establishment_id, student_id, page = 1, pageSize = 10) {
+    // 1) Traigo los datos base del establecimiento
+    const inst = await this.model.findByPk(establishment_id, {
       attributes: [
         'id',
         'establishment_name',
@@ -321,83 +344,108 @@ class EstablishmentService extends BaseService{
         'description',
         'profile_photo',
         'establishment_category_id'
-      ],
-      include: [{
-        model: Offers,
-        attributes: [
-          'id',
-          'title',
-          'description',
-          'conditions',
-          'end_date',
-          'discount_applied',
-          'normal_price',
-          'discount_price',
-          'offer_image',
-          'active'
-        ],
-        where: {
-          active: true,
-          end_date: { [Op.gte]: new Date() }
-        },
-        required: false
-      }]
+      ]
     })
     if (!inst) return null
 
     const establishment = inst.get({ plain: true })
+
+    // firmo foto de perfil si existe
     if (establishment.profile_photo) {
       establishment.profile_photo = await generateSignedUrl(
-        establishment.profile_photo, 7200
+        establishment.profile_photo,
+        7200
       )
     }
-    establishment.offers = await Promise.all(
-      (establishment.offers || []).map(async o => ({
-        ...o,
-        offer_image: o.offer_image
-          ? await generateSignedUrl(o.offer_image, 7200)
-          : null
-      }))
+
+    // 2) Preparo paginación
+    const offset = (page - 1) * pageSize
+
+    // 3) Defino filtros de ofertas activas y no expi­radas
+    const offerWhere = {
+      establishment_id,
+      active: true,
+      end_date: { [Op.gte]: new Date() }
+    }
+    // subconsulta para excluir ya redimidas por este estudiante
+    const notRedeemed = sequelize.literal(`NOT EXISTS (
+      SELECT 1
+        FROM offer_redemptions AS r
+       WHERE r.offer_id = offers.id
+         AND r.student_id = '${student_id}'
+    )`)
+
+    // 4) Query paginada de ofertas
+    const { count: totalItems, rows } = await Offers.findAndCountAll({
+      where: {
+        ...offerWhere,
+        [Op.and]: [notRedeemed]
+      },
+      limit:  pageSize,
+      offset,
+      order: [['id', 'DESC']],
+      attributes: [
+        'id',
+        'title',
+        'description',
+        'conditions',
+        'end_date',
+        'discount_applied',
+        'normal_price',
+        'discount_price',
+        'offer_image',
+        'active'
+      ]
+    })
+
+    // 5) Firmo imágenes y paso a plain object
+    let offers = await Promise.all(
+      rows.map(async inst => {
+        const o = inst.get({ plain: true })
+        if (o.offer_image) {
+          o.offer_image = await generateSignedUrl(o.offer_image, 7200)
+        }
+        return o
+      })
     )
 
-    const offerIds = establishment.offers.map(o => o.id)
-    let roleMap = {}
+    // 6) Traigo roles por oferta
+    const offerIds = offers.map(o => o.id)
     if (offerIds.length) {
-      const rows = await sequelize.query(
+      const rowsRoles = await sequelize.query(
         `SELECT offer_id, student_role_id
-         FROM offer_student_role
-         WHERE offer_id IN (:offerIds)`,
+           FROM offer_student_role
+          WHERE offer_id IN (:offerIds)`,
         {
           replacements: { offerIds },
           type: QueryTypes.SELECT
         }
       )
-      roleMap = rows.reduce((acc, { offer_id, student_role_id }) => {
+      const roleMap = rowsRoles.reduce((acc, { offer_id, student_role_id }) => {
         acc[offer_id] = acc[offer_id] || []
         acc[offer_id].push(student_role_id)
         return acc
       }, {})
+      offers = offers.map(o => ({
+        ...o,
+        student_role_ids: roleMap[o.id] || []
+      }))
     }
-    establishment.offers = establishment.offers.map(o => ({
-      ...o,
-      student_role_ids: roleMap[o.id] || []
-    }))
 
-    const redeemed = await OfferRedemptions.findAll({
-      where: {
-        student_id,
-        offer_id: offerIds
-      },
-      attributes: ['offer_id'],
-      raw: true
-    })
-    const redeemedIds = redeemed.map(r => r.offer_id)
+    // 7) Calculamos totalPages
+    const totalPages = Math.ceil(totalItems / pageSize)
 
-    establishment.offers = establishment.offers.filter(
-      o => !redeemedIds.includes(o.id)
-    )
-
-    return establishment
+    // 8) Devolvemos el establecimiento + ofertas + metadata de paginación
+    return {
+      establishment,
+      offers,
+      pagination: {
+        page,
+        pageSize,
+        totalPages,
+        totalItems
+      }
+    }
   }
 }
 

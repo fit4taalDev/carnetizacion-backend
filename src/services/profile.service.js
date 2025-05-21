@@ -60,11 +60,19 @@ export default class ProfileService extends BaseService {
         7200
       )
     }
-    if (profile.student?.profile_photo) {
-      profile.student.profile_photo = await generateSignedUrl(
-        profile.student.profile_photo,
-        7200
-      )
+    if (profile.student) {
+      if (profile.student.profile_photo) {
+        profile.student.profile_photo = await generateSignedUrl(
+          profile.student.profile_photo,
+          7200
+        )
+      }
+      if (profile.student.qr_img) {
+        profile.student.qr_img = await generateSignedUrl(
+          profile.student.qr_img,
+          7200
+        )
+      }
     }
 
     return profile
