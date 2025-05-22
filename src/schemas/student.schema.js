@@ -10,7 +10,7 @@ export const studentSchema = Joi.object({
     qr_img: Joi.string().optional(),
     profile_photo: Joi.string().optional(),
     program_id:Joi.number().required(),
-    birth_date: Joi.date().required(),
+    birth_date: Joi.date().optional(),
     active: Joi.boolean().required()
     
 })

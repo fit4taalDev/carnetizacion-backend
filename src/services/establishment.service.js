@@ -335,7 +335,6 @@ class EstablishmentService extends BaseService{
   }
 
 async findByIdStudent(establishment_id, student_id, page = 1, pageSize = 10) {
-    // 1) Traigo los datos base del establecimiento
     const inst = await this.model.findByPk(establishment_id, {
       attributes: [
         'id',
@@ -350,7 +349,7 @@ async findByIdStudent(establishment_id, student_id, page = 1, pageSize = 10) {
 
     const establishment = inst.get({ plain: true })
 
-    // firmo foto de perfil si existe
+
     if (establishment.profile_photo) {
       establishment.profile_photo = await generateSignedUrl(
         establishment.profile_photo,
@@ -358,16 +357,15 @@ async findByIdStudent(establishment_id, student_id, page = 1, pageSize = 10) {
       )
     }
 
-    // 2) Preparo paginación
     const offset = (page - 1) * pageSize
 
-    // 3) Defino filtros de ofertas activas y no expi­radas
+ 
     const offerWhere = {
       establishment_id,
       active: true,
       end_date: { [Op.gte]: new Date() }
     }
-    // subconsulta para excluir ya redimidas por este estudiante
+    
     const notRedeemed = sequelize.literal(`NOT EXISTS (
       SELECT 1
         FROM offer_redemptions AS r
@@ -375,7 +373,6 @@ async findByIdStudent(establishment_id, student_id, page = 1, pageSize = 10) {
          AND r.student_id = '${student_id}'
     )`)
 
-    // 4) Query paginada de ofertas
     const { count: totalItems, rows } = await Offers.findAndCountAll({
       where: {
         ...offerWhere,
@@ -398,7 +395,6 @@ async findByIdStudent(establishment_id, student_id, page = 1, pageSize = 10) {
       ]
     })
 
-    // 5) Firmo imágenes y paso a plain object
     let offers = await Promise.all(
       rows.map(async inst => {
         const o = inst.get({ plain: true })
@@ -409,7 +405,6 @@ async findByIdStudent(establishment_id, student_id, page = 1, pageSize = 10) {
       })
     )
 
-    // 6) Traigo roles por oferta
     const offerIds = offers.map(o => o.id)
     if (offerIds.length) {
       const rowsRoles = await sequelize.query(
@@ -432,10 +427,8 @@ async findByIdStudent(establishment_id, student_id, page = 1, pageSize = 10) {
       }))
     }
 
-    // 7) Calculamos totalPages
     const totalPages = Math.ceil(totalItems / pageSize)
 
-    // 8) Devolvemos el establecimiento + ofertas + metadata de paginación
     return {
       establishment,
       offers,

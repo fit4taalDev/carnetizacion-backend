@@ -37,8 +37,53 @@ class StudentController{
           }
           next(err);
         }
-      }
+    }
 
+    async updateStudent(req, res, next) {
+        try {
+          const studentId = req.params.id;
+          const { student_id, ...data } = req.body;
+          const file       = req.file;
+          const fileBuffer = file ? file.buffer : null;
+          const fileMeta   = file
+            ? { filename: file.originalname, mimetype: file.mimetype }
+            : null;
+
+          const updatedStudent = await service.updateStudent(
+            studentId,
+            data,
+            fileBuffer,
+            fileMeta
+          );
+
+          let profileUrl = null;
+          if (updatedStudent.profile_photo) {
+            profileUrl = await generateSignedUrl(
+              updatedStudent.profile_photo,
+              7200
+            );
+          }
+
+          return res.status(200).json({
+            message: 'Student successfully updated',
+            updatedStudent: {
+              ...updatedStudent.get({ plain: true }),
+              profile_photo: profileUrl
+            }
+          });
+        } catch (err) {
+          if (err instanceof multer.MulterError) {
+            const msg = err.code === 'LIMIT_FILE_SIZE'
+              ? 'The file must not be larger than 200 KB.'
+              : err.code === 'LIMIT_UNEXPECTED_FILE'
+                ? err.message
+                : 'Error processing the image.';
+            return res.status(400).json({ error: msg });
+          }
+          next(err);
+        }
+      }
+      
       async findAllStudents(req, res, next) {
         const role     = req.query.role     ? req.query.role.toString().trim()     : undefined;
         const fullname = req.query.fullname ? req.query.fullname.toString().trim() : undefined;

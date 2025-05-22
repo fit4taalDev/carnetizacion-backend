@@ -64,9 +64,64 @@ class StudentService extends BaseService {
           const newStudent = await Students.create(newStudentData, { transaction: t });
           return newStudent;
         });
+    }
+
+    async updateStudent(id, data, fileBuffer, fileMeta) {
+    return sequelize.transaction(async (t) => {
+      // 1) Buscamos y validamos el usuario
+      const user = await Users.findByPk(id, { transaction: t });
+      if (!user) {
+        const err = new Error('User not found');
+        err.status = 404;
+        throw err;
       }
 
-      async findAllStudents(role, fullname, active, programId, dateFrom, dateTo, page = 1, pageSize = 10) {
+      // 2) Si cambió el email, comprobamos unicidad y actualizamos
+      if (data.email && data.email.toLowerCase() !== user.email) {
+        await this.checkIfExistIn(
+          Users,
+          'email',
+          data.email,
+          'The email address is already registered',
+          { transaction: t }
+        );
+        user.email = data.email.toLowerCase();
+        await user.save({ transaction: t });
+      }
+
+      // 3) Buscamos el registro de estudiante
+      const student = await Students.findByPk(id, { transaction: t });
+      if (!student) {
+        const err = new Error('Student not found');
+        err.status = 404;
+        throw err;
+      }
+
+      // 4) Preparamos los datos a actualizar, ignorando student_id
+      const updateData = { ...data };
+      delete updateData.student_id;
+
+      // 5) Si viene nueva foto, la subimos y la añadimos a los datos
+      if (fileBuffer && fileMeta) {
+        const profilePath = await uploadImage(
+          fileBuffer,
+          fileMeta,
+          id,
+          'student'
+        );
+        updateData.profile_photo = profilePath;
+      }
+
+      // 6) Ejecutamos la actualización del estudiante
+      const updatedStudent = await student.update(updateData, {
+        transaction: t
+      });
+
+      return updatedStudent;
+    });
+  }
+
+    async findAllStudents(role, fullname, active, programId, dateFrom, dateTo, page = 1, pageSize = 10) {
       const whereStudents = {};
       if (fullname) {
         whereStudents.fullname = { [Op.iLike]: `%${fullname}%` };
@@ -146,7 +201,7 @@ class StudentService extends BaseService {
         totalPages
       }
     };
-  }
+    }
 
     
   async findById(id, page = 1, pageSize = 10) {

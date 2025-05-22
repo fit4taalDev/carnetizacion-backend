@@ -16,6 +16,13 @@ router.post('/',
     controller.createStudent
 )
 
+router.patch('/:id',
+    validatorHandler(studentSchema),
+    uploadImage('profile_photo'),
+    administratorHandler,
+    controller.updateStudent
+)
+
 router.get('/',
     administratorHandler,
     controller.findAllStudents

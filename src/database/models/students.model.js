@@ -43,7 +43,7 @@ export const Students = sequelize.define('students', {
     },
     birth_date:{
         type: DataTypes.DATEONLY,
-        allowNull: null
+        allowNull: true
     },
     program_id: {
         allowNul: false,
