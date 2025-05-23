@@ -82,98 +82,215 @@ class EstablishmentService extends BaseService{
           const newEstablishment = await Establishments.create(newEstablishmentData, { transaction: t });
           return newEstablishment;
         });
+    }
+
+  async updateEstablishment(id, data, fileBuffer, fileMeta) {
+    return sequelize.transaction(async (t) => {
+      const est = await Establishments.findByPk(id, { transaction: t });
+      if (!est) {
+        const err = new Error('Establishment not found');
+        err.status = 404;
+        throw err;
       }
 
-      async findAllEstablishments(
-        role,
-        establishment_name,
-        status,
-        dateFrom,
-        dateTo,
-        establishment,
-        page = 1,
-        pageSize = 10
-      ) {
-        const where = {};
-        if (establishment_name) {
-          where.establishment_name = { [Op.iLike]: `%${establishment_name}%` };
-        }
-        if (role) {
-          where.establishment_role_id = Number(role);
-        }
-        if (status) {
-          const statusId = parseInt(status, 10);
-          if (isNaN(statusId)) {
-            throw new Error(`El parámetro status debe ser un número válido, no: "${status}"`);
+      const user = await Users.findByPk(est.user_id, { transaction: t });
+      if (data.email !== undefined) {
+        const newEmail = data.email.toLowerCase();
+        if (newEmail !== user.email) {
+          const exists = await Users.findOne({
+            where: { email: newEmail, id: { [Op.ne]: user.id } },
+            transaction: t
+          });
+          if (exists) {
+            const err = new Error('The email address is already registered');
+            err.status = 400;
+            throw err;
           }
-          where.establishment_status_id = statusId;
+          user.email = newEmail;
+          await user.save({ transaction: t });
         }
-        if (dateFrom || dateTo) {
-          where.createdAt = {};
-          if (dateFrom) {
-            where.createdAt[Op.gte] = new Date(dateFrom);
-          }
-          if (dateTo) {
-            const end = new Date(dateTo);
-            end.setHours(23, 59, 59, 999);
-            where.createdAt[Op.lte] = end;
-          }
-        }
-        if (establishment !== undefined && !isNaN(establishment)) {
-          where.establishment_category_id = establishment;
-        }
+      }
 
-        const offset = (page - 1) * pageSize;
-        const { count: totalItems, rows } = await Establishments.findAndCountAll({
-          where,
-          order: [['id', 'DESC']],
-          limit: pageSize,
-          offset,
+      if (data.establishment_id !== undefined) {
+        const newEstId = data.establishment_id;
+        if (newEstId !== est.establishment_id) {
+          const exists = await Establishments.findOne({
+            where: { establishment_id: newEstId, id: { [Op.ne]: est.id } },
+            transaction: t
+          });
+          if (exists) {
+            const err = new Error('The establishment id is already registered');
+            err.status = 400;
+            throw err;
+          }
+          est.establishment_id = newEstId;
+          est.qr_img = await generateEstablishmentQRCode(
+            `${process.env.FRONTEND_URL}/${newEstId}`
+          );
+        }
+      }
+
+      if (data.establishment_name !== undefined) {
+        const newName = data.establishment_name;
+        if (newName !== est.establishment_name) {
+          const exists = await Establishments.findOne({
+            where: { establishment_name: newName, id: { [Op.ne]: est.id } },
+            transaction: t
+          });
+          if (exists) {
+            const err = new Error('The establishment name is already registered');
+            err.status = 400;
+            throw err;
+          }
+          est.establishment_name = newName;
+        }
+      }
+
+      if (data.phone_number !== undefined) {
+        const newPhone = parseInt(data.phone_number, 10);
+        if (isNaN(newPhone)) {
+          const err = new Error(`El parámetro phone_number debe ser un número válido, no: "${data.phone_number}"`);
+          err.status = 400;
+          throw err;
+        }
+        if (newPhone !== est.phone_number) {
+          const exists = await Establishments.findOne({
+            where: { phone_number: newPhone, id: { [Op.ne]: est.id } },
+            transaction: t
+          });
+          if (exists) {
+            const err = new Error('The phone number is already registered');
+            err.status = 400;
+            throw err;
+          }
+          est.phone_number = newPhone;
+        }
+      }
+
+      if (data.kvk !== undefined) {
+        const newKvk = data.kvk;
+        if (newKvk !== est.kvk) {
+          const exists = await Establishments.findOne({
+            where: { kvk: newKvk, id: { [Op.ne]: est.id } },
+            transaction: t
+          });
+          if (exists) {
+            const err = new Error('The kvk is already registered');
+            err.status = 400;
+            throw err;
+          }
+          est.kvk = newKvk;
+        }
+      }
+
+      if (fileBuffer && fileMeta) {
+        const profilePath = await uploadImage(fileBuffer, fileMeta, 'establishment');
+        est.profile_photo = profilePath;
+      }
+
+      const skip = ['email','establishment_id','establishment_name','phone_number','kvk'];
+      for (const [key, value] of Object.entries(data)) {
+        if (!skip.includes(key) && value !== undefined) {
+          est[key] = value;
+        }
+      }
+
+      await est.save({ transaction: t });
+      return est;
+      });
+    }
+
+
+    async findAllEstablishments(
+      role,
+      establishment_name,
+      status,
+      dateFrom,
+      dateTo,
+      establishment,
+      page = 1,
+      pageSize = 10
+    ) {
+      const where = {};
+      if (establishment_name) {
+        where.establishment_name = { [Op.iLike]: `%${establishment_name}%` };
+      }
+      if (role) {
+        where.establishment_role_id = Number(role);
+      }
+      if (status) {
+        const statusId = parseInt(status, 10);
+        if (isNaN(statusId)) {
+          throw new Error(`El parámetro status debe ser un número válido, no: "${status}"`);
+        }
+        where.establishment_status_id = statusId;
+      }
+      if (dateFrom || dateTo) {
+        where.createdAt = {};
+        if (dateFrom) {
+          where.createdAt[Op.gte] = new Date(dateFrom);
+        }
+        if (dateTo) {
+          const end = new Date(dateTo);
+          end.setHours(23, 59, 59, 999);
+          where.createdAt[Op.lte] = end;
+        }
+      }
+      if (establishment !== undefined && !isNaN(establishment)) {
+        where.establishment_category_id = establishment;
+      }
+
+      const offset = (page - 1) * pageSize;
+      const { count: totalItems, rows } = await Establishments.findAndCountAll({
+        where,
+        // Ordenar por establishment_id en orden descendente
+        order: [['establishment_id', 'DESC']],
+        limit: pageSize,
+        offset,
+        include: [
+          { model: EstablishmentRoles, attributes: ['name'] },
+          { model: EstablishmentCategories, attributes: ['id', 'name'] },
+          { model: Users, attributes: ['email'] }
+        ],
+        attributes: {
           include: [
-            { model: EstablishmentRoles, attributes: ['name'] },
-            { model: EstablishmentCategories, attributes: ['id', 'name'] },
-            { model: Users, attributes: ['email'] }
-          ],
-          attributes: {
-            include: [
-              [
-                sequelize.literal(`(
-                  SELECT COUNT(*)
-                  FROM public.offers AS off
-                  WHERE off.establishment_id = establishments.id
-                )`),
-                'offersCount'
-              ]
-            ],
-            exclude: [
-              'user_id',
-              'establishment_role_id',
-              'establishment_category_id'
+            [
+              sequelize.literal(`(
+                SELECT COUNT(*)
+                FROM public.offers AS off
+                WHERE off.establishment_id = establishments.id
+              )`),
+              'offersCount'
             ]
+          ],
+          exclude: [
+            'user_id',
+            'establishment_role_id',
+            'establishment_category_id'
+          ]
+        }
+      });
+
+      const enriched = await Promise.all(
+        rows.map(async inst => {
+          const e = inst.get({ plain: true });
+          e.offersCount = parseInt(e.offersCount, 10);
+          if (e.qr_img) {
+            e.qr_img = await generateSignedUrl(e.qr_img, 7200);
           }
-        });
+          if (e.profile_photo) {
+            e.profile_photo = await generateSignedUrl(e.profile_photo, 7200);
+          }
+          return e;
+        })
+      );
 
-        const enriched = await Promise.all(
-          rows.map(async inst => {
-            const e = inst.get({ plain: true });
-            e.offersCount = parseInt(e.offersCount, 10);
-            if (e.qr_img) {
-              e.qr_img = await generateSignedUrl(e.qr_img, 7200);
-            }
-            if (e.profile_photo) {
-              e.profile_photo = await generateSignedUrl(e.profile_photo, 7200);
-            }
-            return e;
-          })
-        );
-
-        const totalPages = Math.ceil(totalItems / pageSize);
-        return {
-          data: enriched,
-          pagination: { page, pageSize, totalItems, totalPages }
-        };
-      }
-
+      const totalPages = Math.ceil(totalItems / pageSize);
+      return {
+        data: enriched,
+        pagination: { page, pageSize, totalItems, totalPages }
+      };
+    }
     async findById(id, page = 1, pageSize = 10) {
         const now = new Date();
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -257,189 +374,189 @@ class EstablishmentService extends BaseService{
         establishment.pagination = { page, pageSize, totalItems, totalPages };
 
         return establishment;
-      }
-
- async findAllEstablishmentStudent(
-    search = '',
-    category = '',
-    studentId,
-    page = 1,
-    pageSize = 10
-  ) {
-    const where = { establishment_status_id: 0 }
-
-    if (search) {
-      where.establishment_name = { [Op.iLike]: `%${search}%` }
-    }
-    if (category) {
-      const catId = Number(category)
-      if (!Number.isNaN(catId)) {
-        where.establishment_category_id = catId
-      }
     }
 
-    const offset = (page - 1) * pageSize
+    async findAllEstablishmentStudent(
+        search = '',
+        category = '',
+        studentId,
+        page = 1,
+        pageSize = 10
+      ) {
+        const where = { establishment_status_id: 0 }
 
-    const { count: totalItems, rows } = await Establishments.findAndCountAll({
-      where,
-      limit:  pageSize,
-      offset,
-      order: [['id', 'DESC']],
-      attributes: [
-        'id',
-        'establishment_name',
-        'establishment_address',
-        'description',
-        'profile_photo',
-        'establishment_category_id',
-        [
-          sequelize.literal(`(
-            SELECT COUNT(*)
-              FROM offers AS o
-         LEFT JOIN offer_redemptions AS r
-                ON r.offer_id = o.id
-               AND r.student_id = '${studentId}'
-             WHERE o.establishment_id = establishments.id
-               AND r.id IS NULL
-          )`),
-          'offersCount'
-        ]
-      ]
-    })
-
-    const establishments = await Promise.all(
-      rows.map(async inst => {
-        const e = inst.get({ plain: true })
-        e.offersCount = parseInt(e.offersCount, 10)
-        if (e.qr_img) {
-          e.qr_img = await generateSignedUrl(e.qr_img, 7200)
+        if (search) {
+          where.establishment_name = { [Op.iLike]: `%${search}%` }
         }
-        if (e.profile_photo) {
-          e.profile_photo = await generateSignedUrl(e.profile_photo, 7200)
+        if (category) {
+          const catId = Number(category)
+          if (!Number.isNaN(catId)) {
+            where.establishment_category_id = catId
+          }
         }
-        return e
-      })
-    )
 
-    const totalPages = Math.ceil(totalItems / pageSize)
+        const offset = (page - 1) * pageSize
 
-    return {
-      establishments,
-      pagination: {
-        page,
-        pageSize,
-        totalPages,
-        totalItems
-      }
+        const { count: totalItems, rows } = await Establishments.findAndCountAll({
+          where,
+          limit:  pageSize,
+          offset,
+          order: [['id', 'DESC']],
+          attributes: [
+            'id',
+            'establishment_name',
+            'establishment_address',
+            'description',
+            'profile_photo',
+            'establishment_category_id',
+            [
+              sequelize.literal(`(
+                SELECT COUNT(*)
+                  FROM offers AS o
+            LEFT JOIN offer_redemptions AS r
+                    ON r.offer_id = o.id
+                  AND r.student_id = '${studentId}'
+                WHERE o.establishment_id = establishments.id
+                  AND r.id IS NULL
+              )`),
+              'offersCount'
+            ]
+          ]
+        })
+
+        const establishments = await Promise.all(
+          rows.map(async inst => {
+            const e = inst.get({ plain: true })
+            e.offersCount = parseInt(e.offersCount, 10)
+            if (e.qr_img) {
+              e.qr_img = await generateSignedUrl(e.qr_img, 7200)
+            }
+            if (e.profile_photo) {
+              e.profile_photo = await generateSignedUrl(e.profile_photo, 7200)
+            }
+            return e
+          })
+        )
+
+        const totalPages = Math.ceil(totalItems / pageSize)
+
+        return {
+          establishments,
+          pagination: {
+            page,
+            pageSize,
+            totalPages,
+            totalItems
+          }
+        }
     }
-  }
 
-async findByIdStudent(establishment_id, student_id, page = 1, pageSize = 10) {
-    const inst = await this.model.findByPk(establishment_id, {
-      attributes: [
-        'id',
-        'establishment_name',
-        'establishment_address',
-        'description',
-        'profile_photo',
-        'establishment_category_id'
-      ]
-    })
-    if (!inst) return null
+    async findByIdStudent(establishment_id, student_id, page = 1, pageSize = 10) {
+        const inst = await this.model.findByPk(establishment_id, {
+          attributes: [
+            'id',
+            'establishment_name',
+            'establishment_address',
+            'description',
+            'profile_photo',
+            'establishment_category_id'
+          ]
+        })
+        if (!inst) return null
 
-    const establishment = inst.get({ plain: true })
+        const establishment = inst.get({ plain: true })
 
 
-    if (establishment.profile_photo) {
-      establishment.profile_photo = await generateSignedUrl(
-        establishment.profile_photo,
-        7200
-      )
-    }
+        if (establishment.profile_photo) {
+          establishment.profile_photo = await generateSignedUrl(
+            establishment.profile_photo,
+            7200
+          )
+        }
 
-    const offset = (page - 1) * pageSize
+        const offset = (page - 1) * pageSize
 
- 
-    const offerWhere = {
-      establishment_id,
-      active: true,
-      end_date: { [Op.gte]: new Date() }
-    }
     
-    const notRedeemed = sequelize.literal(`NOT EXISTS (
-      SELECT 1
-        FROM offer_redemptions AS r
-       WHERE r.offer_id = offers.id
-         AND r.student_id = '${student_id}'
-    )`)
-
-    const { count: totalItems, rows } = await Offers.findAndCountAll({
-      where: {
-        ...offerWhere,
-        [Op.and]: [notRedeemed]
-      },
-      limit:  pageSize,
-      offset,
-      order: [['id', 'DESC']],
-      attributes: [
-        'id',
-        'title',
-        'description',
-        'conditions',
-        'end_date',
-        'discount_applied',
-        'normal_price',
-        'discount_price',
-        'offer_image',
-        'active'
-      ]
-    })
-
-    let offers = await Promise.all(
-      rows.map(async inst => {
-        const o = inst.get({ plain: true })
-        if (o.offer_image) {
-          o.offer_image = await generateSignedUrl(o.offer_image, 7200)
+        const offerWhere = {
+          establishment_id,
+          active: true,
+          end_date: { [Op.gte]: new Date() }
         }
-        return o
-      })
-    )
+        
+        const notRedeemed = sequelize.literal(`NOT EXISTS (
+          SELECT 1
+            FROM offer_redemptions AS r
+          WHERE r.offer_id = offers.id
+            AND r.student_id = '${student_id}'
+        )`)
 
-    const offerIds = offers.map(o => o.id)
-    if (offerIds.length) {
-      const rowsRoles = await sequelize.query(
-        `SELECT offer_id, student_role_id
-           FROM offer_student_role
-          WHERE offer_id IN (:offerIds)`,
-        {
-          replacements: { offerIds },
-          type: QueryTypes.SELECT
+        const { count: totalItems, rows } = await Offers.findAndCountAll({
+          where: {
+            ...offerWhere,
+            [Op.and]: [notRedeemed]
+          },
+          limit:  pageSize,
+          offset,
+          order: [['id', 'DESC']],
+          attributes: [
+            'id',
+            'title',
+            'description',
+            'conditions',
+            'end_date',
+            'discount_applied',
+            'normal_price',
+            'discount_price',
+            'offer_image',
+            'active'
+          ]
+        })
+
+        let offers = await Promise.all(
+          rows.map(async inst => {
+            const o = inst.get({ plain: true })
+            if (o.offer_image) {
+              o.offer_image = await generateSignedUrl(o.offer_image, 7200)
+            }
+            return o
+          })
+        )
+
+        const offerIds = offers.map(o => o.id)
+        if (offerIds.length) {
+          const rowsRoles = await sequelize.query(
+            `SELECT offer_id, student_role_id
+              FROM offer_student_role
+              WHERE offer_id IN (:offerIds)`,
+            {
+              replacements: { offerIds },
+              type: QueryTypes.SELECT
+            }
+          )
+          const roleMap = rowsRoles.reduce((acc, { offer_id, student_role_id }) => {
+            acc[offer_id] = acc[offer_id] || []
+            acc[offer_id].push(student_role_id)
+            return acc
+          }, {})
+          offers = offers.map(o => ({
+            ...o,
+            student_role_ids: roleMap[o.id] || []
+          }))
         }
-      )
-      const roleMap = rowsRoles.reduce((acc, { offer_id, student_role_id }) => {
-        acc[offer_id] = acc[offer_id] || []
-        acc[offer_id].push(student_role_id)
-        return acc
-      }, {})
-      offers = offers.map(o => ({
-        ...o,
-        student_role_ids: roleMap[o.id] || []
-      }))
-    }
 
-    const totalPages = Math.ceil(totalItems / pageSize)
+        const totalPages = Math.ceil(totalItems / pageSize)
 
-    return {
-      establishment,
-      offers,
-      pagination: {
-        page,
-        pageSize,
-        totalPages,
-        totalItems
-      }
+        return {
+          establishment,
+          offers,
+          pagination: {
+            page,
+            pageSize,
+            totalPages,
+            totalItems
+          }
+        }
     }
-  }
 }
 
 export default EstablishmentService

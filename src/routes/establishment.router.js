@@ -16,6 +16,13 @@ router.post('/',
     controller.createEstablishment
 )
 
+router.patch('/:id',
+    validatorHandler(establishmentSchema),
+    uploadImage('profile_photo'),
+    administratorHandler,
+    controller.updateEstablishment
+)
+
 router.get('/',
     administratorHandler,
     controller.findAllEstablishments

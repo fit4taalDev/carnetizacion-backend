@@ -46,7 +46,55 @@ class EstablishmentController{
           }
           next(err);
         }
+    }
+
+    async updateEstablishment(req, res, next) {
+      try {
+        const establishmentId = req.params.id;
+        // Extraemos id para que no intente sobrescribirlo
+        const { id, ...data } = req.body;
+        const file       = req.file;
+        const fileBuffer = file?.buffer ?? null;
+        const fileMeta   = file
+          ? { filename: file.originalname, mimetype: file.mimetype }
+          : null;
+
+        const updated = await service.updateEstablishment(
+          establishmentId,
+          data,
+          fileBuffer,
+          fileMeta
+        );
+
+        // Si devolvió perfil, generamos URL firmada
+        let profileUrl = null;
+        if (updated.profile_photo) {
+          profileUrl = await generateSignedUrl(
+            updated.profile_photo,
+            7200
+          );
+        }
+
+        return res.status(200).json({
+          message: 'Establishment successfully updated',
+          updatedEstablishment: {
+            ...updated.get({ plain: true }),
+            profile_photo: profileUrl
+          }
+        });
+      } catch (err) {
+        if (err instanceof multer.MulterError) {
+          const msg =
+            err.code === 'LIMIT_FILE_SIZE'
+              ? 'The file must not be larger than 200 KB.'
+              : err.code === 'LIMIT_UNEXPECTED_FILE'
+              ? err.message
+              : 'Error processing the image.';
+          return res.status(400).json({ error: msg });
+        }
+        next(err);
       }
+    }
 
     async findAllEstablishments (req, res, next){
         try{

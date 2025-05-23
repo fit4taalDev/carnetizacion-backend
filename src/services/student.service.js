@@ -68,7 +68,6 @@ class StudentService extends BaseService {
 
     async updateStudent(id, data, fileBuffer, fileMeta) {
     return sequelize.transaction(async (t) => {
-      // 1) Buscamos y validamos el usuario
       const user = await Users.findByPk(id, { transaction: t });
       if (!user) {
         const err = new Error('User not found');
@@ -76,7 +75,6 @@ class StudentService extends BaseService {
         throw err;
       }
 
-      // 2) Si cambió el email, comprobamos unicidad y actualizamos
       if (data.email && data.email.toLowerCase() !== user.email) {
         await this.checkIfExistIn(
           Users,
@@ -89,7 +87,6 @@ class StudentService extends BaseService {
         await user.save({ transaction: t });
       }
 
-      // 3) Buscamos el registro de estudiante
       const student = await Students.findByPk(id, { transaction: t });
       if (!student) {
         const err = new Error('Student not found');
@@ -97,11 +94,9 @@ class StudentService extends BaseService {
         throw err;
       }
 
-      // 4) Preparamos los datos a actualizar, ignorando student_id
       const updateData = { ...data };
       delete updateData.student_id;
 
-      // 5) Si viene nueva foto, la subimos y la añadimos a los datos
       if (fileBuffer && fileMeta) {
         const profilePath = await uploadImage(
           fileBuffer,
@@ -111,8 +106,6 @@ class StudentService extends BaseService {
         );
         updateData.profile_photo = profilePath;
       }
-
-      // 6) Ejecutamos la actualización del estudiante
       const updatedStudent = await student.update(updateData, {
         transaction: t
       });
