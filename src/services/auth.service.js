@@ -6,6 +6,8 @@ import { Roles } from "../database/models/roles.model.js";
 import { Administrators } from "../database/models/administrators.model.js";
 import { Students } from "../database/models/students.model.js";
 import { Establishments } from "../database/models/establishments.model.js";
+import { randomBytes, createHash } from 'crypto';
+import { Resend } from 'resend';
 
 class AuthService extends BaseService{
     constructor(){
@@ -48,6 +50,37 @@ class AuthService extends BaseService{
         });
       
         return !!user; 
+    }
+
+    async sendResetPasswordEmail(email ) {
+        const user = await this.model.findOne({ where: { email: email.toLowerCase() } });
+        if (!user) throw { status: 404, message: 'User not found' };
+
+        const resetToken     = randomBytes(32).toString('hex');
+        const resetTokenHash = createHash('sha256').update(resetToken).digest('hex');
+
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+        user.passwordResetToken   = resetTokenHash;
+        user.passwordResetExpires = expiresAt;
+        await user.save();
+
+        const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+
+        const resend = new Resend(process.env.RESEND_API);
+
+        await resend.emails.send({
+            from:    'onboarding@resend.dev',
+            to:      email,
+            subject: '🔒 Restablece tu contraseña',
+            html:    `
+            <p>Hola,</p>
+            <p>Haz clic <a href="${resetUrl}">aquí</a> para restablecer tu contraseña. El enlace expira en 1 hora.</p>
+            <p>Si no lo solicitaste, ignora este correo.</p>
+            `
+        });
+
+        return { message: 'Reset mail sent' };
     }
 
     async getUserByEmail(email){

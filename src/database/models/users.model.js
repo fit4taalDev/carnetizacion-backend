@@ -20,6 +20,14 @@ export const Users = sequelize.define('users', {
         allowNull: false,
         type: DataTypes.STRING        
     },
+    passwordResetToken: {
+        type: DataTypes.STRING,
+        allowNull: true,
+    },
+    passwordResetExpires: {
+        type: DataTypes.DATE,
+        allowNull: true,
+    },
     first_time:{ 
         allowNull:false,
         type: DataTypes.BOOLEAN,
