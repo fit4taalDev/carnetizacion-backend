@@ -106,14 +106,16 @@ class AuthService extends BaseService{
         return { message: 'Password successfully reset' };
     }
 
-    async getUserByEmail(email){
-        const user = await this.model.findOne({
+    async getUserByEmail(email) {
+        const user  = await this.model.findOne({
             where: {email: email.toLowerCase()},
-            include:{
-                model: Roles,
-                attribute: ["name"]
-            }
-        })
+            include: [
+                { model: Roles,           attributes: ['id', 'name', ] },
+                { model: Administrators,  attributes: ['profile_photo', 'fullname']},
+                { model: Students,        attributes: ['fullname', 'profile_photo', 'student_role_id']},
+                { model: Establishments,  attributes: ['establishment_name', 'profile_photo', 'establishment_role_id']},
+            ]
+            });
 
         if(!user){
             throw { status: 401, message: 'Invalid credentials'};
@@ -121,12 +123,12 @@ class AuthService extends BaseService{
 
         const token = jwt.sign(
             {
-              exp: Math.floor(Date.now() / 1000) + 60 * 60 * 2, 
-              id: user.id,
-              role_id: user.role.id
+            exp: Math.floor(Date.now() / 1000) + 60 * 60 * 2, 
+            id: user.id,
+            role_id: user.role.id
             }, process.env.JWT_KEY);
         
-        return {user, token} 
+        return {user, token}   
     }
 }
 
