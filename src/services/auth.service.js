@@ -8,6 +8,7 @@ import { Students } from "../database/models/students.model.js";
 import { Establishments } from "../database/models/establishments.model.js";
 import { randomBytes, createHash } from 'crypto';
 import { Resend } from 'resend';
+import { Op } from "sequelize";
 
 class AuthService extends BaseService{
     constructor(){
@@ -65,22 +66,44 @@ class AuthService extends BaseService{
         user.passwordResetExpires = expiresAt;
         await user.save();
 
-        const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+        const resetUrl = `${process.env.FRONTEND_URL_PASSWORD}/reset-password/${resetToken}`;
 
         const resend = new Resend(process.env.RESEND_API);
 
         await resend.emails.send({
-            from:    'onboarding@resend.dev',
-            to:      email,
-            subject: '🔒 Restablece tu contraseña',
-            html:    `
-            <p>Hola,</p>
-            <p>Haz clic <a href="${resetUrl}">aquí</a> para restablecer tu contraseña. El enlace expira en 1 hora.</p>
-            <p>Si no lo solicitaste, ignora este correo.</p>
-            `
+        from:    'onboarding@resend.dev',
+        to:      email,
+        subject: '🔒 Reset your password',
+        html:    `
+            <p>Hello,</p>
+            <p>Click <a href="${resetUrl}">here</a> to reset your password. This link expires in 1 hour.</p>
+            <p>If you did not request this, please ignore this email.</p>
+        `
         });
 
         return { message: 'Reset mail sent' };
+    }
+
+    async resetPassword({ token, password }) {
+        const tokenHash = createHash('sha256').update(token).digest('hex');
+
+        const user = await Users.findOne({
+        where: {
+            passwordResetToken: tokenHash,
+            passwordResetExpires: { [Op.gt]: new Date() }
+        }
+        });
+        if (!user) {
+        throw { status: 400, message: 'The time to reset your password has already passed.' };
+        }
+
+        user.password = await bcrypt.hash(password, 10);
+
+        user.passwordResetToken   = null;
+        user.passwordResetExpires = null;
+        await user.save();
+
+        return { message: 'Password successfully reset' };
     }
 
     async getUserByEmail(email){

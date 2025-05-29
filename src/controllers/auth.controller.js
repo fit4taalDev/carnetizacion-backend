@@ -77,6 +77,20 @@ class AuthController{
             next(error)
         }
     }
+
+    async resetPassword (req, res, next){
+      try {
+        const { token, password } = req.body;
+        if (!token || !password) {
+          return res.status(400).json({ message: 'Token and new password are mandatory' });
+        }
+
+        const result = await service.resetPassword({ token, password });
+        return res.status(200).json(result);
+      } catch (err) {
+        next(err);
+      }
+    }
  
 
 }

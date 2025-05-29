@@ -3,6 +3,7 @@ import validatorHandler from '../middlewares/validator.handler.js';
 import { loginSchema } from '../schemas/auth.schema.js';
 import AuthController from '../controllers/auth.controller.js';
 import { resetPaswordEmailSchema } from '../schemas/resetPasswordEmail.schema.js';
+import { resetPasswordSchema } from '../schemas/resetPassword.js';
 
 const router = express.Router();
 
@@ -24,6 +25,11 @@ router.post('/user-by-email',
 router.post('/forgot-password',
     validatorHandler(resetPaswordEmailSchema),
     controller.forgotPassword
+)
+
+router.post('/reset-password',
+    validatorHandler(resetPasswordSchema),
+    controller.resetPassword
 )
 
 export default router
