@@ -9,6 +9,7 @@ import { Establishments } from "../database/models/establishments.model.js";
 import { randomBytes, createHash } from 'crypto';
 import { Resend } from 'resend';
 import { Op } from "sequelize";
+import resetPasswordTemplate from "../utils/resetPasswordEmailTemplate/resetPasswordEmailTemplate.js";
 
 class AuthService extends BaseService{
     constructor(){
@@ -70,15 +71,13 @@ class AuthService extends BaseService{
 
         const resend = new Resend(process.env.RESEND_API);
 
+        const html = resetPasswordTemplate(resetUrl);
+
         await resend.emails.send({
-        from:    'onboarding@resend.dev',
-        to:      email,
-        subject: '🔒 Reset your password',
-        html:    `
-            <p>Hello,</p>
-            <p>Click <a href="${resetUrl}">here</a> to reset your password. This link expires in 1 hour.</p>
-            <p>If you did not request this, please ignore this email.</p>
-        `
+            from:    'onboarding@resend.dev',
+            to:      email,
+            subject: 'Reset your password',
+            html
         });
 
         return { message: 'Reset mail sent' };

@@ -51,7 +51,6 @@ class AuthController{
         const { email } = req.body;
         const apiKey    = req.headers['api-key'];
 
-        // 1) Validar API key
         if (!apiKey || apiKey !== process.env.INTERNAL_API_KEY) {
           return res.status(403).json({ message: 'Not authorized' });
         }
@@ -59,17 +58,14 @@ class AuthController{
           return res.status(400).json({ message: 'Email is required' });
         }
 
-        // 2) Obtener user y token desde el servicio
         const { user, token } = await service.getUserByEmail(email);
 
-        // 3) Extraer el perfil asociado
         const { administrator, student, establishment } = user;
         const profile = administrator || student || establishment;
         if (!profile) {
           throw { status: 500, message: 'Profile data missing' };
         }
 
-        // 4) Calcular sub_role, fullname y firmar URL de foto
         const sub_role    = profile.student_role_id   ?? profile.establishment_role_id ?? null;
         const fullname    = profile.fullname          ?? profile.establishment_name   ?? null;
         let profile_photo = null;
@@ -77,7 +73,6 @@ class AuthController{
           profile_photo = await generateSignedUrl(profile.profile_photo, 7200);
         }
 
-        // 5) Devolver mismo formato que login
         return res.status(200).json({
           message: 'Login successful',
           user: {
