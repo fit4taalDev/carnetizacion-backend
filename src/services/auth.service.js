@@ -71,10 +71,10 @@ class AuthService extends BaseService{
 
         const resend = new Resend(process.env.RESEND_API);
 
-        const html = resetPasswordTemplate(resetUrl);
+        const html = await resetPasswordTemplate(resetUrl);
 
         await resend.emails.send({
-            from:    'onboarding@resend.dev',
+            from:    'no-reply@fit4id.com',
             to:      email,
             subject: 'Reset your password',
             html

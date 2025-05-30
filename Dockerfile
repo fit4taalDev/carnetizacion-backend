@@ -1,18 +1,12 @@
-FROM node:18-alpine AS deps
-WORKDIR /app
+FROM node:18-alpine
 
+WORKDIR /usr/src/app
 
-COPY package*.json ./
-RUN npm ci --only=production
+COPY package.json package-lock.json ./
 
+RUN npm ci --production
 
-FROM node:18-alpine AS runner
-WORKDIR /app
-
-
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
 
 ENV PORT=8000
 EXPOSE 8000

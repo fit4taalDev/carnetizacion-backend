@@ -1,4 +1,7 @@
-export default function resetPasswordTemplate(resetUrl) {
+import { generateSignedUrl } from "../signedUrl.js";
+
+export default async function resetPasswordTemplate(resetUrl) {
+  const signedImageUrl = await generateSignedUrl('Logo-01.jpg', 7 * 24 * 60 * 60);
   return `
     <!DOCTYPE html>
     <html lang="en">
@@ -6,9 +9,9 @@ export default function resetPasswordTemplate(resetUrl) {
       <meta charset="UTF-8">
     </head>
     <body style="margin:0;padding:0;width:100%;background-color:#FFFFFF;font-family:Arial,sans-serif;">
-      <header style="margin:0;padding:20px 0 0 20px;text-align:left;">
+      <header style="margin:0;padding:20px 0 0 0px;text-align:left;">
         <img
-          src="https://thumbs.dreamstime.com/b/vector-de-la-marca-nike-swoosh-logotipo-osh-vectorial-en-fondo-negro-dise%C3%B1o-imprimible-183282346.jpg"
+          src="${signedImageUrl}"
           alt="logo"
           style="display:block;width:130px;object-fit:contain;margin:0;"
         />
