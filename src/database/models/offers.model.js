@@ -17,8 +17,24 @@ export const Offers = sequelize.define('offers', {
         allowNull: false,
         type: DataTypes.TEXT,
     },
+    description_en:{
+        allowNull: true,
+        type: DataTypes.TEXT,
+    },
+    description_es:{
+        allowNull: true,
+        type: DataTypes.TEXT,
+    },
     conditions: {
         allowNull: false,
+        type: DataTypes.TEXT,
+    },
+    condition_en:{
+        allowNull: true,
+        type: DataTypes.TEXT,
+    },
+    condition_es:{
+        allowNull: true,
         type: DataTypes.TEXT,
     },
     end_date:{

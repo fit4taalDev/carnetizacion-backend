@@ -14,6 +14,7 @@ import { generateSignedUrl } from "../utils/signedUrl.js";
 import { Offers } from "../database/models/offers.model.js";
 import { OfferRedemptions } from "../database/models/offerRedemptions.js";
 import { Students } from "../database/models/students.model.js";
+import { translated } from "../utils/translated.js";
 
 
 const storage = new Storage({ keyFilename: process.env.KEY_FILE_NAME });
@@ -31,58 +32,77 @@ class EstablishmentService extends BaseService{
         }
     }
 
-    async createEstablishment(data, fileBuffer, fileMeta) {
-        return sequelize.transaction(async (t) => {
-          const genericPassword = data.establishment_id + '#';
-          const userData = {
-            email: data.email.toLowerCase(),
-            password: await bcrypt.hash(genericPassword, 10),
-            role_id: 1, 
-          };
+async createEstablishment(data, fileBuffer, fileMeta) {
+  return sequelize.transaction(async (t) => {
+    const genericPassword = data.establishment_id + '#';
+    const userData = {
+      email: data.email.toLowerCase(),
+      password: await bcrypt.hash(genericPassword, 10),
+      role_id: 1, 
+    };
 
-          await this.checkIfExistIn(Users, 'email', data.email,
-            'The email address is already registered',
-            { transaction: t }
-          );
-          await this.checkIfExistIn(Establishments, 'establishment_name', data.establishment_name,
-            'The establishment name is already registered',
-            { transaction: t }
-          );
-          await this.checkIfExistIn(Establishments, 'phone_number', data.phone_number,
-            'The phone number is already registered',
-            { transaction: t }
-          );
-          await this.checkIfExistIn(Establishments, 'establishment_id', data.establishment_id,
-            'The establishment id is already registered',
-            { transaction: t }
-          );
+    await this.checkIfExistIn(Users, 'email', data.email,
+      'The email address is already registered',
+      { transaction: t }
+    );
+    await this.checkIfExistIn(Establishments, 'establishment_name', data.establishment_name,
+      'The establishment name is already registered',
+      { transaction: t }
+    );
+    await this.checkIfExistIn(Establishments, 'phone_number', data.phone_number,
+      'The phone number is already registered',
+      { transaction: t }
+    );
+    await this.checkIfExistIn(Establishments, 'establishment_id', data.establishment_id,
+      'The establishment id is already registered',
+      { transaction: t }
+    );
 
-          await this.checkIfExistIn(Establishments, 'kvk', data.kvk,
-            'The kvk is already registered',
-            { transaction: t }
-          );
-    
-          const newUser = await Users.create(userData, { transaction: t });
+    await this.checkIfExistIn(Establishments, 'kvk', data.kvk,
+      'The kvk is already registered',
+      { transaction: t }
+    );
 
-          const qrEstablishent = await generateEstablishmentQRCode(`${process.env.FRONTEND_URL}/${data.establishment_id}`)
+    const newUser = await Users.create(userData, { transaction: t });
 
-          let profilePath = null;
-          if (fileBuffer && fileMeta) {
-            profilePath = await uploadImage(fileBuffer, fileMeta, 'establishment');
-          }
-    
-          const newEstablishmentData = {
-            ...data,
-            id: newUser.id,
-            user_id: newUser.id,
-            profile_photo: profilePath,
-            qr_img: qrEstablishent
-          };
-    
-          const newEstablishment = await Establishments.create(newEstablishmentData, { transaction: t });
-          return newEstablishment;
-        });
+    const qrEstablishent = await generateEstablishmentQRCode(`${process.env.FRONTEND_URL}/${data.establishment_id}`);
+
+    let profilePath = null;
+    if (fileBuffer && fileMeta) {
+      profilePath = await uploadImage(fileBuffer, fileMeta, 'establishment');
     }
+
+    // Traducción actualizada con soporte para arreglo en translatedText
+    let description_en = null;
+    let description_es = null;
+
+    try {
+      const [enResult, esResult] = await Promise.all([
+        translated(data.description, 'en'),
+        translated(data.description, 'es')
+      ]);
+
+      description_en = enResult.data.translations.translatedText[0];
+      description_es = esResult.data.translations.translatedText[0];
+    } catch (error) {
+      console.error('Error translating description:', error);
+    }
+
+    const newEstablishmentData = {
+      ...data,
+      id: newUser.id,
+      user_id: newUser.id,
+      profile_photo: profilePath,
+      qr_img: qrEstablishent,
+      description_en,
+      description_es
+    };
+
+    const newEstablishment = await Establishments.create(newEstablishmentData, { transaction: t });
+    return newEstablishment;
+  });
+}
+
 
   async updateEstablishment(id, data, fileBuffer, fileMeta) {
     return sequelize.transaction(async (t) => {

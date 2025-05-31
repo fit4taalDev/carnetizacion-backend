@@ -47,6 +47,14 @@ export const Establishments = sequelize.define('establishments', {
         type: DataTypes.STRING,
         allowNull: false,
     },
+    description_en:{
+        type: DataTypes.STRING,
+        allowNull:true
+    },
+    description_es:{
+        type: DataTypes.STRING,
+        allowNull:true
+    },
     profile_photo: {
         type: DataTypes.STRING,
         allowNull: true,
